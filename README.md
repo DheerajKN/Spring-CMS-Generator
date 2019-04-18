@@ -79,3 +79,7 @@ Create your Aspects as easy as calling a script
     ~/Desktop/spring-CMS-Generator.sh a EmailChecker
 
 Then the script will automatically ask you some questions that will then generate the needed code snippets that can used anywhere in the project.
+
+# Further Developments
+
+- Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
