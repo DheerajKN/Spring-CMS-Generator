@@ -1,5 +1,7 @@
 # Spring CMS Generator
 
+[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/) [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php) [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/) [![written-in-shell-script](https://img.shields.io/badge/</>-Shell%20Script-<COLOR>.svg)](https://shields.io/) [![current-version](https://img.shields.io/badge/version-1.0.4-blue.svg)](https://shields.io/) [![platform-compactibility](https://img.shields.io/badge/platform-linux%20|%20osx-lightgrey.svg)](https://shields.io/)
+
 Spring Controller Model Service Generator is a easy to use Command Line Based code generator tool that handles most of the initial heavy-lighting for you when productivity is at essence. **Inspired from loopback.**
 
 # Spring-CMS-Generator.sh
@@ -31,6 +33,20 @@ For controller we have a seperate flag that auto-generates certain code-snippets
 ### Extra Features in Model component
 
 If you have **m** key the script prompts you to enter **propertyName** along with questions of **dataType, nullable and unique status** which after selecting so will auto generate Model file with code. Also after creation of Model, it's subsequent **Repository** file will be created.
+
+##### Now you can add Relations from 1 Entity to another
+
+When you are using `m` flag after the creation of properties to the entity file you will prompted to define any relations that this entity hold. They are basically 4 relations that can be defined:
+
+- **M21**
+  This will create @ManyToOne Relation in this entity file and on the terminal generates the code-snippet for @OneToMany that has to added in the related Model's file.
+- **12M**
+  This will create @OneToMany Relation in this entity file and on the terminal generates the code-snippet for @ManyToOne that has to added in the related Model's file.
+- **121P**
+  In the Case of OneToOne Mapping there is a Parent Entity and a Child Entity. It relies on the logic of that without Parent child wouldn't be possible.
+  This will create @OneToOne Relation in this parent entity file and on the terminal generates the code-snippet for @OneToOne that has to added in the child Model's file.
+- **121C**
+  This will create @OneToOne Relation in this child entity file and on the terminal generates the code-snippet for @OneToOne that has to added in the parent Model's file.
 
 ## Make Sure
 

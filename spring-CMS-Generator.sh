@@ -4,8 +4,22 @@ working_dir=$(find src/main/java -name *Application.java | sed 's|/[^/]*$||' | h
 #working_test_dir=$(find src/test/java -name *ApplicationTests.java | sed 's|/[^/]*$||' | head -n 1)
 working_test_dir="${working_dir//main/test}"
 package_name=$(echo $working_dir | cut -c 15- | tr "/" .)
-smallCase=$(echo "$2" | sed 's/^./\L&\E/')
-smallCaseWithUnderscore=$(echo "$smallCase" | sed -e 's/\([^[:blank:]]\)\([[:upper:]]\)/\1_\2/g' | tr '[:upper:]' '[:lower:]')
+
+function javaVariable()
+{
+  local smallCase=$(echo "$1" | sed 's/^./\L&\E/')
+  echo "$smallCase"
+}
+
+function dbVariable()
+{
+  local smallCaseWithUnderscore=$(echo "$1" | sed -e 's/\([^[:blank:]]\)\([[:upper:]]\)/\1_\2/g' | tr '[:upper:]' '[:lower:]')
+
+  echo "$smallCaseWithUnderscore"
+}
+
+smallCase=$(javaVariable $2)   
+smallCaseWithUnderscore=$(dbVariable $smallCase)   
 
 mkdir -p $working_dir/{controller,service,model,repository,security,aspect}
 mkdir -p $working_test_dir/controller
@@ -1010,12 +1024,8 @@ if [ -f "$working_dir/model/$2.java" ] && [ -s "$working_dir/model/$2.java" ]; t
 else
   model="package "$package_name".model;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -1040,8 +1050,8 @@ while true; do
   printf "\n"
    read -e -p "propName : " propName
      [[ -n "$propName" ]] || break
-    propName=$(echo "$propName" | sed 's/^./\L&\E/')
-    prop_Name=$(echo "$propName" | sed -e 's/\([^[:blank:]]\)\([[:upper:]]\)/\1_\2/g' | tr '[:upper:]' '[:lower:]') 
+    propName=$(javaVariable $propName)
+    prop_Name=$(dbVariable $propName) 
 options=("int" "String" "long" "boolean")
 
 for ((i=0;i<${#options[@]};i++)); do 
@@ -1091,9 +1101,89 @@ done
 "
 done
 
+options=("M21" "12M" "121P" "121C")
+
+for ((i=0;i<${#options[@]};i++)); do 
+  string="$(($i+1))) ${options[$i]}"
+  echo "$string"
+done
+
+while true; do
+	printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out"
+	printf "\n"
+	read -e -p 'Enter the relationship to be used in this model: ' opt
+	[[ -n "$opt" ]] || break
+	if [ "$opt" -ge 4 -a "$opt" -le 1 ]; then   
+		break;
+   	fi
+	opt=${options[$opt-1]}	
+	read -e -p 'Type the Model Name that you want to relate this model to: ' relatedModel
+
+		smallCaseOfRelatedModel=$(javaVariable $relatedModel)
+		smallCaseOfRelatedModelWithUnderscore=$(dbVariable $smallCaseOfRelatedModel)
+
+case $opt in
+	M21)
+		model+="	@ManyToOne
+    @JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
+    private $relatedModel $smallCaseOfRelatedModel;
+"
+
+	modelInPrint+="
+	Add this in snippet in the $relatedModel Entity file
+	
+	@JsonIgnore
+	@OneToMany(targetEntity=$2.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private List<$2> $smallCase;
+	"
+	;;
+	12M)
+		model+="	@JsonIgnore
+	@OneToMany(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private List<$relatedModel> $smallCaseOfRelatedModel;
+"
+
+	modelInPrint+="
+	Add this in snippet in the $relatedModel Entity file
+	
+	@ManyToOne
+    @JoinColumn(name=\""$smallCaseWithUnderscore"_id\",referencedColumnName=\""$smallCaseWithUnderscore"_id\")
+    private $2 $smallCase;
+	"
+	;;
+	121P)
+	model+="	@JsonIgnore
+	@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private $relatedModel $smallCaseOfRelatedModel;
+"
+	modelInPrint+="
+	Add this in snippet in the $relatedModel Entity file
+	
+	@OneToOne
+	@JoinColumn(name=\""$smallCase"_id\",referencedColumnName=\""$smallCase"_id\",nullable=false)
+	private $2 $smallCase;
+	"
+	;;
+	121C)
+	model+="	@OneToOne
+	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
+	private $relatedModel $smallCaseOfRelatedModel;
+"
+	modelInPrint+="
+	Add this in snippet in the $relatedModel Entity file
+	
+	@JsonIgnore
+	@OneToOne(targetEntity=$2.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private $2 $smallCase;
+	"
+	;;
+esac
+done
+
 model+="}" 
 
 echo "$model" > "$working_dir/model/$2.java"
+echo "$modelInPrint"
 
 #Repository Code
 options=("CrudRepository" "JpaRepository")
@@ -1111,16 +1201,26 @@ if [ "$opt" -ge 1 -a "$opt" -le 2 ]; then
    fi
 done
 
-echo "package "$package_name".repository;
+repoCode="package "$package_name".repository;
+"
 
-import org.springframework.data.repository."$repo";
+case $repo in 
+CrudRepository)
+	repoCode+="import org.springframework.data.repository.CrudRepository;"
+	;;
+JpaRepository)
+	repoCode+="import org.springframework.data.jpa.repository.JpaRepository;"
+	;;
+esac
 
+repoCode+="
 import "$package_name.model.$2";
 
 public interface "$2"Repository extends "$repo"<"$2", Long> 
 {
 
-}" > "$working_dir/repository/$2Repository.java"
+}" 
+echo "$repoCode" > "$working_dir/repository/$2Repository.java"
 fi
 fi
 
