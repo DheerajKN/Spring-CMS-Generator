@@ -39,13 +39,18 @@ If you have **m** key the script prompts you to enter **propertyName** along wit
 When you are using `m` flag after the creation of properties to the entity file you will prompted to define any relations that this entity hold. They are basically 4 relations that can be defined:
 
 - **M21**
+
   This will create @ManyToOne Relation in this entity file and on the terminal generates the code-snippet for @OneToMany that has to added in the related Model's file.
 - **12M**
+
   This will create @OneToMany Relation in this entity file and on the terminal generates the code-snippet for @ManyToOne that has to added in the related Model's file.
 - **121P**
+
   In the Case of OneToOne Mapping there is a Parent Entity and a Child Entity. It relies on the logic of that without Parent child wouldn't be possible.
+  
   This will create @OneToOne Relation in this parent entity file and on the terminal generates the code-snippet for @OneToOne that has to added in the child Model's file.
 - **121C**
+
   This will create @OneToOne Relation in this child entity file and on the terminal generates the code-snippet for @OneToOne that has to added in the parent Model's file.
 
 ## Make Sure
