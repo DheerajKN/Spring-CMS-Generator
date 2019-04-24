@@ -21,7 +21,6 @@ function dbVariable()
 smallCase=$(javaVariable $2)   
 smallCaseWithUnderscore=$(dbVariable $smallCase)   
 
-mkdir -p $working_dir/{controller,service,model,repository,security,aspect}
 mkdir -p $working_test_dir/controller
 
 if [[ $1 == *--pluginCodeGen* ]]; then
@@ -102,6 +101,8 @@ echo "{
     		<artifactId>json-path</artifactId>\
        </dependency>' pom.xml
 
+mkdir -p $working_dir/{controller,service,model,repository,aspect}
+
 echo "package "$package_name".model;
 
 import java.util.List;
@@ -143,7 +144,7 @@ public class LanguageTranslations
 echo "package "$package_name".repository;
 
 import org.springframework.data.repository.CrudRepository;
-
+import java.util.Optional;
 import "$package_name.model.LanguageTranslations";
 
 public interface LanguageTranslationsRepository extends CrudRepository<LanguageTranslations, Long> 
@@ -151,7 +152,7 @@ public interface LanguageTranslationsRepository extends CrudRepository<LanguageT
 	Optional<LanguageTranslations> findByLanguageName(String languageName);
 }" > "$working_dir/repository/LanguageTranslationsRepository.java"
 
-		echo "package com.calf.care.aspect;
+		echo "package "$package_name".aspect;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -177,13 +178,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-import "$package_name".repository.LanguageTranslationRepository;
+import "$package_name".repository.LanguageTranslationsRepository;
 import "$package_name".service.LanguageTranslationService;
 
 public class LanguageCheckerAspect {
 
 	@Autowired
-	private LanguageTranslationRepository languageTranslationsRepository;
+	private LanguageTranslationsRepository languageTranslationsRepository;
 	
 	@Autowired
 	private LanguageTranslationService languageTranslationService;
@@ -266,7 +267,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class LanguageTranslationService 
 {
-	String os = System.getProperty(\"os.name\").toLowerCase().indexOf(\"win\") >= 0 ? \"\\\": \"/\";
+	String os = System.getProperty(\"os.name\").toLowerCase().indexOf(\"win\") >= 0 ? \"\\\\\": \"/\";
 	
 	public String getTranslationLanguageData(String locale)
 	{
@@ -282,10 +283,13 @@ public class LanguageTranslationService
 		}		
 	}
 }" > "$working_dir/service/LanguageTranslationService.java" 
-		printf '\e[1;34m%-6s\e[m \e[1;33m%-6s\e[m' "Add these lines in this file -> import.sql" "INSERT INTO language_translations(language_name)VALUES('en');
-INSERT INTO language_translations(language_name)VALUES('de');"
+		printf '\e[1;34m%-6s\e[m \e[1;36m%-6s\e[m' "Add these lines in this file -> import.sql" "
+INSERT INTO language_translations(language_name)VALUES('en');
+INSERT INTO language_translations(language_name)VALUES('de');
+"
 	fi
 	if [[ $* == *freemaker* ]]; then
+	mkdir -p $working_dir/controller
 		sed -i '26i\
 			\
 		<dependency>\
@@ -353,6 +357,7 @@ public class FreeMakerController
 	fi
 
 	if [[ $* == *mysql* ]]; then
+	
 		sed -i '26i\
 		\
 		<dependency>\
@@ -402,6 +407,7 @@ spring.datasource.driverClassName=org.h2.Driver' src/test/resources/application.
 	fi
 
 	if [[ $* == *oauth2* ]]; then
+	mkdir -p $working_dir/{controller,service,model,repository,security}
 		sed -i '26i\
 		\
 		<dependency>\
@@ -419,7 +425,7 @@ spring.datasource.driverClassName=org.h2.Driver' src/test/resources/application.
    		 	<version>2.3.3.RELEASE</version>\
 		</dependency>' pom.xml
 
-echo "package "$package_name".repository;
+echo "package "$package_name".controller;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -740,18 +746,19 @@ oauth2Config+="
 	       .userDetailsService(userDetailsService)
 	       .tokenEnhancer(customTokenEnhancer())
 	      // .pathMapping(defaultPath, customPath)
-	       .tokenStore(tokenStore());
+	       .tokenStore(tokenStore);
 	     endpoints.allowedTokenEndpointRequestMethods(HttpMethod.GET, HttpMethod.POST);
 	   }
 ///////////////////////////////////////////////////////////////
 
-//  Or if there is no customPath Mapping or Tokenizer needed then remove above snippet and use below
+//  Or if there is no customPath Mapping or Token Enhancer needed then remove above snippet and use below
 //  Also make sure to remove CustomTokener file.
 //    @Override
 //    public void configure(final AuthorizationServerEndpointsConfigurer endpoints) {
-//        endpoints.tokenStore(tokenStore())
+//        endpoints.tokenStore(tokenStore)
 //                .authenticationManager(authenticationManager)
 //                .userDetailsService(userDetailsService);
+//			endpoints.allowedTokenEndpointRequestMethods(HttpMethod.GET, HttpMethod.POST);
 //    }
 }"
 fi
@@ -782,7 +789,7 @@ public class CustomTokenConverter implements TokenEnhancer
 
        return accessToken;
    }
-}" > "$working_dir/security/CustomTokener.java"
+}" > "$working_dir/security/CustomTokenConverter.java"
 
 echo "package "$package_name".security;
 
@@ -921,7 +928,7 @@ fi
 	fi
 fi
 if [[ $1 == *"c"* ]]; then
-
+mkdir -p $working_dir/controller
   controller="package "$package_name".controller;
 
 import org.springframework.web.bind.annotation.RestController;
@@ -1016,7 +1023,7 @@ fi
 
 
 if [[ $1 == *"m"* ]]; then
-
+mkdir -p $working_dir/model
 if [ -f "$working_dir/model/$2.java" ] && [ -s "$working_dir/model/$2.java" ]; then
 	echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
 	So either safeguard it before re-executing
@@ -1109,8 +1116,7 @@ for ((i=0;i<${#options[@]};i++)); do
 done
 
 while true; do
-	printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out"
-	printf "\n"
+
 	read -e -p 'Enter the relationship to be used in this model: ' opt
 	[[ -n "$opt" ]] || break
 	if [ "$opt" -ge 4 -a "$opt" -le 1 ]; then   
@@ -1220,12 +1226,13 @@ public interface "$2"Repository extends "$repo"<"$2", Long>
 {
 
 }" 
+mkdir -p $working_dir/repository
 echo "$repoCode" > "$working_dir/repository/$2Repository.java"
 fi
 fi
 
 if [[ $1 == *"s"* ]]; then
-
+mkdir -p $working_dir/service
   service="package "$package_name".service;
 
 import org.springframework.stereotype.Service;
@@ -1261,6 +1268,7 @@ fi
 fi
 
 if [[ $1 == *"a"* ]]; then
+mkdir -p $working_dir/aspect
 elemtype_options=("ANNOTATION_TYPE" "CONSTRUCTOR" "FIELD" "LOCAL_VARIABLE" "METHOD" "PACKAGE" "PARAMETER" "TYPE")
 
 for ((i=0;i<${#elemtype_options[@]};i++)); do 
