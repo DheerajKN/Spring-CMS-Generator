@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 - Functions for code reusability
 - Able to add relations from one entity to another when m flag is selected.
+- File name used passed after [c | m | s] flag can be of any style but it's first letter
+  will be capitalized by the code
 - CHANGELOG.md
 - Added Badges
 

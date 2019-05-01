@@ -18,8 +18,10 @@ function dbVariable()
   echo "$smallCaseWithUnderscore"
 }
 
-smallCase=$(javaVariable $2)   
+smallCase=$(javaVariable ${2^})   
 smallCaseWithUnderscore=$(dbVariable $smallCase)   
+
+set $(echo "${2^}" | sed 's/.*/\u&/') ${2^}
 
 mkdir -p $working_test_dir/controller
 
@@ -943,18 +945,18 @@ import org.springframework.web.bind.annotation.*;
 
 	if [[ $1 == *"s"* ]]; then
 		controller+="import org.springframework.beans.factory.annotation.Autowired;
-import "$package_name".service."$2"Service;
+import "$package_name".service."${2^}"Service;
 		"
 	fi
 
 controller+="
 @RestController
-public class "$2"Controller 
+public class "${2^}"Controller 
 {
 "			
 	if [[ $1 == *"s"* ]]; then
 	controller+="	@Autowired
-	private "$2"Service "$smallCase"Service;
+	private "${2^}"Service "$smallCase"Service;
 	"
 	fi
 	if [[ $* == *--need-sample* ]]; then
@@ -996,14 +998,14 @@ controller+="
 }"
 
 if [[ $* == *--overwrite* ]]; then
-	echo "$controller" > "$working_dir/controller/$2Controller.java"
-elif [ -f "$working_dir/controller/$2Controller.java" ] && [ -s "$working_dir/controller/$2Controller.java" ]; then
+	echo "$controller" > "$working_dir/controller/${2^}Controller.java"
+elif [ -f "$working_dir/controller/${2^}Controller.java" ] && [ -s "$working_dir/controller/${2^}Controller.java" ]; then
 	echo -e "\033[1;31mIt seems the CONTROLLER file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another controller using c <newControllerName>tag
 	or overwrite current one using only c <oldControllerName> --overwrite flag";
 else
-	echo "$controller" > "$working_dir/controller/$2Controller.java"
+	echo "$controller" > "$working_dir/controller/${2^}Controller.java"
 fi	
 #Create Test file for the same
 
@@ -1011,20 +1013,20 @@ echo "package "$package_name".controller;
 
 import org.junit.Test;
 
-public class "$2"ControllerTest
+public class "${2^}"ControllerTest
 {
 	@Test
-	public void first"$2"Test()
+	public void first"${2^}"Test()
 	{
 
 	}
-}" > "$working_test_dir/controller/$2ControllerTest.java"
+}" > "$working_test_dir/controller/${2^}ControllerTest.java"
 fi
 
 
 if [[ $1 == *"m"* ]]; then
 mkdir -p $working_dir/model
-if [ -f "$working_dir/model/$2.java" ] && [ -s "$working_dir/model/$2.java" ]; then
+if [ -f "$working_dir/model/${2^}.java" ] && [ -s "$working_dir/model/${2^}.java" ]; then
 	echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another model using m <newModelName> tag";
@@ -1043,7 +1045,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Table(name=\"$smallCaseWithUnderscore\")
-public class $2 
+public class ${2^} 
 {
 	@Id
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
@@ -1139,8 +1141,8 @@ case $opt in
 	Add this in snippet in the $relatedModel Entity file
 	
 	@JsonIgnore
-	@OneToMany(targetEntity=$2.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
-	private List<$2> $smallCase;
+	@OneToMany(targetEntity=${2^}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private List<${2^}> $smallCase;
 	"
 	;;
 	12M)
@@ -1154,7 +1156,7 @@ case $opt in
 	
 	@ManyToOne
     @JoinColumn(name=\""$smallCaseWithUnderscore"_id\",referencedColumnName=\""$smallCaseWithUnderscore"_id\")
-    private $2 $smallCase;
+    private ${2^} $smallCase;
 	"
 	;;
 	121P)
@@ -1167,7 +1169,7 @@ case $opt in
 	
 	@OneToOne
 	@JoinColumn(name=\""$smallCase"_id\",referencedColumnName=\""$smallCase"_id\",nullable=false)
-	private $2 $smallCase;
+	private ${2^} $smallCase;
 	"
 	;;
 	121C)
@@ -1179,8 +1181,8 @@ case $opt in
 	Add this in snippet in the $relatedModel Entity file
 	
 	@JsonIgnore
-	@OneToOne(targetEntity=$2.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
-	private $2 $smallCase;
+	@OneToOne(targetEntity=${2^}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private ${2^} $smallCase;
 	"
 	;;
 esac
@@ -1188,7 +1190,7 @@ done
 
 model+="}" 
 
-echo "$model" > "$working_dir/model/$2.java"
+echo "$model" > "$working_dir/model/${2^}.java"
 echo "$modelInPrint"
 
 #Repository Code
@@ -1220,14 +1222,14 @@ JpaRepository)
 esac
 
 repoCode+="
-import "$package_name.model.$2";
+import "$package_name.model.${2^}";
 
-public interface "$2"Repository extends "$repo"<"$2", Long> 
+public interface "${2^}"Repository extends "$repo"<"${2^}", Long> 
 {
 
 }" 
 mkdir -p $working_dir/repository
-echo "$repoCode" > "$working_dir/repository/$2Repository.java"
+echo "$repoCode" > "$working_dir/repository/${2^}Repository.java"
 fi
 fi
 
@@ -1240,30 +1242,30 @@ import org.springframework.stereotype.Service;
 
 	if [[ $1 == *"m"* ]]; then
 		service+="import org.springframework.beans.factory.annotation.Autowired;
-import "$package_name".repository."$2"Repository;
+import "$package_name".repository."${2^}"Repository;
 		"
 	fi
 
 service+="
 @Service
-public class "$2"Service 
+public class "${2^}"Service 
 {
 "			
 	if [[ $1 == *"m"* ]]; then
 	service+="	@Autowired
-	private "$2"Repository "$smallCase"Repository;"
+	private "${2^}"Repository "$smallCase"Repository;"
 	fi
 service+="
 }"
 if [[ $* == *--overwrite* ]]; then
-	echo "$service" > "$working_dir/service/$2Service.java"
-elif [ -f "$working_dir/service/$2Service.java" ] && [ -s "$working_dir/service/$2Service.java" ]; then
+	echo "$service" > "$working_dir/service/${2^}Service.java"
+elif [ -f "$working_dir/service/${2^}Service.java" ] && [ -s "$working_dir/service/${2^}Service.java" ]; then
 	echo -e "\033[1;31mIt seems the SERVICE file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another model using s <newServiceName> tag
 	or overwrite current one using only s <oldServiceName> --overwrite flag";
 else
-	echo "$service" > "$working_dir/service/$2Service.java"
+	echo "$service" > "$working_dir/service/${2^}Service.java"
 fi
 fi
 
@@ -1308,22 +1310,22 @@ import java.lang.annotation.Target;
 
 @Target(ElementType."$elemType")
 @Retention(RetentionPolicy."$retenPolicy")
-public @interface "$2" {
+public @interface "${2^}" {
 
-}" > "$working_dir/aspect/$2.java"
+}" > "$working_dir/aspect/${2^}.java"
 
 echo "package "$package_name".aspect;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 
-public class $2Aspect 
+public class ${2^}Aspect 
 {
-	@Around(\"@annotation($package_name.$2)\")
-	public Object "$2"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
+	@Around(\"@annotation($package_name.${2^})\")
+	public Object "${2^}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
 		Object u = joinPoint.getArgs()[0];
 		return joinPoint.proceed();
 	}
-}" > "$working_dir/aspect/$2Aspect.java"
+}" > "$working_dir/aspect/${2^}Aspect.java"
 
 fi
