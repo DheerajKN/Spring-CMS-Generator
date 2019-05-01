@@ -1057,7 +1057,7 @@ public class ${2^}
 while true; do
   printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out"
   printf "\n"
-   read -e -p "propName : " propName
+   read -e -p "propName in camelCase: " propName
      [[ -n "$propName" ]] || break
     propName=$(javaVariable $propName)
     prop_Name=$(dbVariable $propName) 
