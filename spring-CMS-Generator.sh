@@ -5,12 +5,6 @@ working_dir=$(find src/main/java -name *Application.java | sed 's|/[^/]*$||' | h
 working_test_dir="${working_dir//main/test}"
 package_name=$(echo $working_dir | cut -c 15- | tr "/" .)
 
-function javaFileNamer()
-{
-	local javaFileName=$(echo "$1" | tr '[:upper:]' '[:lower:]'| sed 's/.*/\u&/')
-	echo "$javaFileName"
-}
-
 function javaVariable()
 {
   local smallCase=$(echo "$1" | sed 's/^./\L&\E/')
@@ -24,7 +18,7 @@ function dbVariable()
   echo "$smallCaseWithUnderscore"
 }
 
-fileName=$(javaFileNamer $2)
+declare -c fileName="$2"
 smallCase=$(javaVariable $fileName)   
 smallCaseWithUnderscore=$(dbVariable $smallCase)   
 
@@ -1131,7 +1125,7 @@ while true; do
    	fi
 	opt=${options[$opt-1]}	
 	read -e -p 'Type the Model Name that you want to relate this model to: ' relatedModel
-		relatedModel=$(javaFileNamer $relatedModel)
+		declare -c relatedModel="$relatedModel"
 		smallCaseOfRelatedModel=$(javaVariable $relatedModel)
 		smallCaseOfRelatedModelWithUnderscore=$(dbVariable $smallCaseOfRelatedModel)
 
@@ -1146,8 +1140,8 @@ case $opt in
 	Add this in snippet in the $relatedModel Entity file
 	
 	@JsonIgnore
-	@OneToMany(targetEntity=${2^}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
-	private List<${2^}> $smallCase;
+	@OneToMany(targetEntity=${fileName}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private List<${fileName}> $smallCase;
 	"
 	;;
 	12M)
