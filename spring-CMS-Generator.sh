@@ -20,11 +20,12 @@ function dbVariable()
 
 declare -c fileName="$2"
 smallCase=$(javaVariable $fileName)   
-smallCaseWithUnderscore=$(dbVariable $smallCase)   
+smallCaseWithUnderscore=$(dbVariable $smallCase)
 
 mkdir -p $working_test_dir/controller
 
 if [[ $1 == *--pluginCodeGen* ]]; then
+	sed -i '/<\/version>/,/<name>/{/<[^\/]*\/packaging>/d}' pom.xml
 	if [[ $* == *sonar* ]]; then
 		nameLine=$(grep -n "<name>" pom.xml | cut -d ':' -f 1)
 
@@ -98,7 +99,7 @@ echo "{
 		sed -i '26i\
 			\
 		<dependency>\
-            <groupId>com.jayway.jsonpath</groupId>\
+        <groupId>com.jayway.jsonpath</groupId>\
     		<artifactId>json-path</artifactId>\
        </dependency>' pom.xml
 
@@ -135,11 +136,13 @@ public class LanguageTranslations
 	@Column(name=\"language_name\", nullable = false)
 	private String languageName;
 
-// Any model that has langCode has in it's model will have this line and this file will have
-// it's equivalent @OneToMany mapping
+// Any model that has langCode in it's model will have this line 
 //	@ManyToOne
 //	@JoinColumn(name=\"language_translations_id\",referencedColumnName=\"language_translations_id\",nullable=false)
 //	private LanguageTranslations languageTranslations;
+	
+//	and this file will have contain 
+// it's equivalent @OneToMany mapping
 }" > "$working_dir/model/LanguageTranslations.java"
 
 echo "package "$package_name".repository;
@@ -303,11 +306,14 @@ INSERT INTO language_translations(language_name)VALUES('de');
     	  	<version>3.10-FINAL</version>\
 		</dependency>' pom.xml
 
-       sed -i '3i\
+echo "
+" >> src/main/resources/application.properties
+       sed -i '1i\
+			 \
 spring.freemarker.template-loader-path: classpath:/static\
 spring.freemarker.suffix: .ftl' src/main/resources/application.properties
 
-echo "<#import "/spring.ftl" as spring />
+echo "<#import \"/spring.ftl\" as spring />
 
 <!DOCTYPE html>
 <html lang=\"en\">
@@ -318,7 +324,10 @@ echo "<#import "/spring.ftl" as spring />
     <body align=\"center\">
     
     	<@spring.bind \"user\"/>
-    	<h2>Hello there to ${user}</h2>
+		<@spring.bind \"logo\"/>
+
+    	<h2>Hello there to \${user}</h2>
+		<!-- <img src=\"\${img}\" /> -->
     </body>
 </html>" > src/main/resources/static/sample.ftl
 
@@ -381,7 +390,8 @@ public class FreeMakerController
 			<optional>true</optional>\
 		</dependency>' pom.xml
 
-		echo "" > src/main/resources/application.properties
+		echo "
+" >> src/main/resources/application.properties
 		sed -i '1i\
 spring.jpa.hibernate.ddl-auto=update\
 \
@@ -400,7 +410,8 @@ server.servlet.context-path=/*someContextPath*' src/main/resources/application.p
 mkdir -p src/test/resources
 touch src/test/resources/application.properties
 
-echo "" > src/test/resources/application.properties
+echo "
+" >> src/test/resources/application.properties
 
 sed -i '1i\
 spring.jpa.hibernate.ddl-auto=create\
@@ -530,6 +541,11 @@ public class User implements UserDetails
 	@Override
 	public String getUsername() {
 		return email;
+	}
+
+	@Override
+	public String getPassword() {
+		return null;
 	}
 
 	@JsonIgnore

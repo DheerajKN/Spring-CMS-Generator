@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.0.5] - 2019-05-02
+
+### Added
+
+- Added contextual changes that got overlooked during development.
+
+### Changed
+
+- Resolved bugs that provided improper results due to `sed`
+- Some text were missing, which are now added
+
 ## [1.0.4] - 2019-04-23
 
 ### Added
