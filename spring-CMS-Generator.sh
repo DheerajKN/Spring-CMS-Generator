@@ -372,6 +372,10 @@ public class FreeMakerController
 			<scope>runtime</scope>\
 		</dependency>\
 		<dependency>\
+			<groupId>org.springframework.boot</groupId>\
+			<artifactId>spring-boot-starter-data-jpa</artifactId>\
+		</dependency>\
+		<dependency>\
 			<groupId>org.projectlombok</groupId>\
 			<artifactId>lombok</artifactId>\
 			<optional>true</optional>\
@@ -393,6 +397,7 @@ spring.datasource.password=root\
 spring.jpa.properties.hibernate.dialect = org.hibernate.dialect.MySQL5Dialect\
 server.servlet.context-path=/*someContextPath*' src/main/resources/application.properties
 
+mkdir -p src/test/resources
 touch src/test/resources/application.properties
 
 echo "" > src/test/resources/application.properties
@@ -461,7 +466,7 @@ import java.util.Optional;
 
 import org.springframework.data.repository.CrudRepository;
 
-import com.dheeraj.cms.proj.model.User;
+import "$package_name".model.User;
 
 public interface UserRepository extends CrudRepository<User, Long> 
 {
@@ -784,7 +789,7 @@ public class CustomTokenConverter implements TokenEnhancer
        User user = (User) authentication.getPrincipal();
        final Map<String, Object> additionalInfo = new HashMap<>();
 
-       additionalInfo.put(\"name\", user.getName());
+       additionalInfo.put(\"name\", user.getUsername());
 
        ((DefaultOAuth2AccessToken) accessToken).setAdditionalInformation(additionalInfo);
 
