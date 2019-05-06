@@ -408,7 +408,6 @@ spring.jpa.properties.hibernate.dialect = org.hibernate.dialect.MySQL5Dialect\
 server.servlet.context-path=/*someContextPath*' src/main/resources/application.properties
 
 mkdir -p src/test/resources
-touch src/test/resources/application.properties
 
 echo "
 " >> src/test/resources/application.properties
