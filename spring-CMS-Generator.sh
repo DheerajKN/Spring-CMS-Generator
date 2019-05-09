@@ -1337,10 +1337,14 @@ echo "package "$package_name".aspect;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
 
+@Aspect
+@Component
 public class ${fileName}Aspect 
 {
-	@Around(\"@annotation($package_name.${fileName})\")
+	@Around(\"@annotation($package_name.aspect.${fileName})\")
 	public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
 		Object u = joinPoint.getArgs()[0];
 		return joinPoint.proceed();

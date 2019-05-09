@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Added contextual changes that got overlooked during development.
+- Aspect Bug Resolved
 
 ### Changed
 
