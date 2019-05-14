@@ -18,7 +18,7 @@ function dbVariable()
   echo "$smallCaseWithUnderscore"
 }
 
-declare -c fileName="$2"
+fileName=$(echo "$2" | sed 's/^./\U&\E/')
 smallCase=$(javaVariable $fileName)   
 smallCaseWithUnderscore=$(dbVariable $smallCase)
 
