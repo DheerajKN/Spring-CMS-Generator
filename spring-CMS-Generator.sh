@@ -25,7 +25,35 @@ smallCaseWithUnderscore=$(dbVariable $smallCase)
 mkdir -p $working_test_dir/controller
 
 if [[ $1 == *--pluginCodeGen* ]]; then
+	packagingType=$(sed -n -e 's/.*<packaging>\(.*\)<\/packaging>.*/\1/p' pom.xml)
+	
 	sed -i '/<\/version>/,/<name>/{/<[^\/]*\/packaging>/d}' pom.xml
+	sed -i '/<\/project>/d' pom.xml
+	sed -i '/<finalName>/,/<\/packaging>/c<\/build>' pom.xml
+
+	sed -i "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>\
+	<\/build>\
+	<packaging>${packagingType}<\/packaging>\
+<\/project>/g" pom.xml
+
+printf '\e[1;35m%-6s\e[m' "Perform Ctrl+A and Ctrl+I to format pom.xml file
+"
+	if [ "$packagingType" == "war" ]; then
+		printf '\e[1;35m%-6s\e[m' "For war file, value in <finalName> is the context-path
+		"
+		printf '\e[1;36m%-6s\e[m' "Also make sure you extends SpringBootServletInitializer
+		"
+		printf '\e[1;36m%-6s\e[m' "spring.datasource.jndi-name in application.properties is necessary
+		"
+	elif [ "$packagingType" == "jar" ]; then
+		printf '\e[1;35m%-6s\e[m' "For jar file, server.servlet.context-path is needed along 
+		with <finalName>
+		"
+		printf '\e[1;36m%-6s\e[m' "instance's database credentials are needed if application.yml
+		is not added in the instance.
+		"
+	fi
+
 	if [[ $* == *sonar* ]]; then
 		nameLine=$(grep -n "<name>" pom.xml | cut -d ':' -f 1)
 
@@ -62,8 +90,7 @@ if [[ $1 == *--pluginCodeGen* ]]; then
        	</plugin>\
 		</plugins>\
 			<finalName>${projNameInSmall}</finalName>\
-	</build>\
-	<packaging>war</packaging>" pom.xml
+	</build>" pom.xml
 
 	sed -i "$((pluginLine+1)),$((pluginLine+3))d" pom.xml
 
