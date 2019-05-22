@@ -270,6 +270,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import com.jayway.jsonpath.JsonPath;
 
+import "$package_name".aspect.LanguageChecker;
 import "$package_name".service.LanguageTranslationService;
 		
 @RestController
@@ -278,6 +279,7 @@ public class LanguageTranslationController
 	@Autowired
 	private LanguageTranslationService languageTranslationService;
 	
+	@LanguageChecker
 	@GetMapping(\"/langCode\")
 	public ResponseEntity<String> getLangCodeAndJson(@RequestHeader(\"Accept-Language\")String locale)
 	{
