@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 - Added contextual changes that got overlooked during development.
 - Important Deployment steps are also added for different packaging types.
+- Also in --pluginCodeGen now user will know what all files are being generated or modified.
 
 ## [1.0.5] - 2019-05-02
 

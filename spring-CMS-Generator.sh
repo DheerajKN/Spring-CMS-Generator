@@ -110,7 +110,9 @@ sonar.sources=src/main/java
 sonar.java.binaries=target/classes
 sonar.java.test.binaries=./target/test-classes/${packageInBrackets}" > sonar-project.properties
 	
-	printf '\e[1;35m%-6s\e[m' "Perform Ctrl+A and Ctrl+I to format pom.xml file
+	printf '\e[1;35m%-6s\e[m' "	Updated pom.xml with required plugins for sonar.
+	Perform Ctrl+A and Ctrl+I to format pom.xml file.
+	Added sonar-project.properties with required context
 "
 	fi
 
@@ -163,12 +165,12 @@ public class LanguageTranslations
 	@Column(name=\"language_name\", nullable = false)
 	private String languageName;
 
-// Any model that has langCode in it's model will have this line 
+// Any model that requires langCode in it's model will have this line 
 //	@ManyToOne
 //	@JoinColumn(name=\"language_translations_id\",referencedColumnName=\"language_translations_id\",nullable=false)
 //	private LanguageTranslations languageTranslations;
 	
-//	and this file will have contain 
+//	and subsequently this file will contain
 // it's equivalent @OneToMany mapping
 }" > "$working_dir/model/LanguageTranslations.java"
 
@@ -314,7 +316,12 @@ public class LanguageTranslationService
 		}		
 	}
 }" > "$working_dir/service/LanguageTranslationService.java" 
-		printf '\e[1;34m%-6s\e[m \e[1;36m%-6s\e[m' "Add these lines in this file -> import.sql" "
+		printf '\e[1;34m%-6s\e[m \e[1;36m%-6s\e[m' "Generated en, de json files
+Updated pom.xml with required imports for multiLang support
+Generated LanguageTranslations model and it's Repository method
+LanguageChecker Aspect file
+Sample Implementation of Multi-Lang using LanguageTranslationController and LanguageTranslationService
+Add these lines in this file -> import.sql" "
 INSERT INTO language_translations(language_name)VALUES('en');
 INSERT INTO language_translations(language_name)VALUES('de');
 "
@@ -391,6 +398,11 @@ public class FreeMakerController
 		return \"data:image/png;base64,\" + new String(imgBytesAsBase64);
 	}
 }" > "$working_dir/controller/FreeMakerController.java"
+
+printf '\e[1;39m%-6s\e[m' "Updated pom.xml with required imports for freemaker
+Added necessary lines to pom.xml
+Added Sample Implementaion of the same using sample.ftl in resources/static folder and FreemakerController
+"
 	fi
 
 	if [[ $* == *mysql* ]]; then
@@ -447,6 +459,12 @@ spring.datasource.password=sa\
 spring.jpa.database-platform=org.hibernate.dialect.H2Dialect\
 spring.h2.console.enabled=true\
 spring.datasource.driverClassName=org.h2.Driver' src/test/resources/application.properties
+
+printf "Updated pom.xml with required imports for mysql functionality
+Added necessary lines in application.properties in both main and test folders
+"
+printf "\e[1;31mMake sure to update \e[46;5;12mtomcat-jndi-name and databaseName and someContextPath\e[0m \e[1;31min main/resources/app.properties file\e[0m
+"
 	fi
 
 	if [[ $* == *oauth2* ]]; then
@@ -931,6 +949,11 @@ public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
         return registration;
     }
 }"
+
+printf '\e[1;38m%-6s\e[m' "Generated Security Folder with all required files
+Updated pom.xml files with required dependencies
+Added Sample Controller
+Generated User Model and Repo to support OAuth2 dependency."
 
 printf '\e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;32m%-6s\e[m' "Make sure to write this mysql lines in" "import.sql" "where OAuth Client Credentials are user_name:" "admin" "and password:" "admin123" "
 

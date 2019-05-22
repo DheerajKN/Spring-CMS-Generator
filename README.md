@@ -24,11 +24,11 @@ In the Spring Framework there are basically 3 main components RestController, Mo
 
 Using this command which automatically creates UserController, User, UserService files along with all the imports and needed Auto-wiring among them. You can create any kind of combinations with these 3 keywords c, m, s like you can have create only Service and Model using **ms** etc.
 
-## --need-sample
+- **--need-sample**
 
-For controller we have a seperate flag that auto-generates certain code-snippets that is widely used in controller like generating **GET, POST, PUT, DELETE request mapping** along with description on how to **fetch data via Request Body, PathVariable, RequestParam** or **RequestHeader.**
+  For controller we have a seperate flag that auto-generates certain code-snippets that is widely used in controller like generating **GET, POST, PUT, DELETE request mapping** along with description on how to **fetch data via Request Body, PathVariable, RequestParam** or **RequestHeader.**
 
-    ~/Desktop/spring-CMS-Generator.sh c User --need-sample
+        ~/Desktop/spring-CMS-Generator.sh c User --need-sample
 
 ### Extra Features in Model component
 
