@@ -128,9 +128,14 @@ echo "{
 		sed -i '26i\
 			\
 		<dependency>\
-        <groupId>com.jayway.jsonpath</groupId>\
-    		<artifactId>json-path</artifactId>\
-       </dependency>' pom.xml
+      <groupId>com.jayway.jsonpath</groupId>\
+    	<artifactId>json-path</artifactId>\
+    </dependency>\
+		<dependency>\
+			<groupId>org.projectlombok</groupId>\
+			<artifactId>lombok</artifactId>\
+			<optional>true</optional>\
+		</dependency>' pom.xml
 
 mkdir -p $working_dir/{controller,service,model,repository,aspect}
 
@@ -200,7 +205,6 @@ public @interface LanguageChecker {}
 		echo "package "$package_name".aspect;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -228,9 +232,6 @@ public class LanguageCheckerAspect {
 		
 		if(languageTranslationsRepository.findByLanguageName(locale).isPresent())
 		{
-			Field f = String.class.getDeclaredField(\"value\");
-			f.setAccessible(true);
-			f.set(locale, new String(locale).concat(\";\").concat(languageTranslationService.getTranslationLanguageData(locale)).toCharArray());
 			return joinPoint.proceed();
 		}
 		return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
@@ -267,6 +268,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import com.jayway.jsonpath.JsonPath;
 
 import "$package_name".service.LanguageTranslationService;
 		
@@ -277,15 +279,11 @@ public class LanguageTranslationController
 	private LanguageTranslationService languageTranslationService;
 	
 	@GetMapping(\"/langCode\")
-	public ResponseEntity<Map<String, String>> getLangCodeAndJson(@RequestHeader(\"Accept-Language\")String locale)
+	public ResponseEntity<String> getLangCodeAndJson(@RequestHeader(\"Accept-Language\")String locale)
 	{
-		String[] localeInfoData = languageTranslationService.getTranslationLanguageData(locale).split(\";\");
+		String localeJSONData = languageTranslationService.getTranslationLanguageData(locale);
 		
-		Map<String, String> localeData = new HashMap<>();
-		localeData.put(\"locale\", localeInfoData[0]);
-		localeData.put(\"localeJson\", localeInfoData[1]);
-		
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(localeData);
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(\"Requested Locale is: \" + locale + \"and Translation is: \"JsonPath.read(localeJSONData, \"$.hello\"));
 	}
 }" > "$working_dir/controller/LanguageTranslationController.java" 
 
