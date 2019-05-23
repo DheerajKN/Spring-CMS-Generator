@@ -61,30 +61,31 @@ sed -i "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>${newLine}\
 
 	if [[ $* == *sonar* ]]; then
 sed -i 's/		<\/plugin>/		<\/plugin>\
+			<!-- plugin and execution goals needed for running sonar -->\
 			<plugin>\
 				<groupId>org.apache.maven.plugins<\/groupId>\
 				<artifactId>maven-surefire-plugin<\/artifactId>\
 			<\/plugin>\
 			<plugin>\
-	           <groupId>org.jacoco<\/groupId>\
-	           <artifactId>jacoco-maven-plugin<\/artifactId>\
-	           <version>0.8.0<\/version>\
-	           <executions>\
-	               <execution>\
-	                   <id>default-prepare-agent<\/id>\
-	                   <goals>\
-	                       <goal>prepare-agent<\/goal>\
-	                   <\/goals>\
-	               <\/execution>\
-	               <execution>\
-	                   <id>default-report<\/id>\
-	                   <phase>prepare-package<\/phase>\
-	                   <goals>\
-	                       <goal>report<\/goal>\
-	                   <\/goals>\
-	               <\/execution>\
-	           <\/executions>\
-       	<\/plugin>/g' pom.xml
+				<groupId>org.jacoco<\/groupId>\
+				<artifactId>jacoco-maven-plugin<\/artifactId>\
+				<version>0.8.0<\/version>\
+				<executions>\
+					<execution>\
+						<id>default-prepare-agent<\/id>\
+						<goals>\
+							<goal>prepare-agent<\/goal>\
+						<\/goals>\
+					<\/execution>\
+					<execution>\
+						<id>default-report<\/id>\
+						<phase>prepare-package<\/phase>\
+						<goals>\
+							<goal>report<\/goal>\
+						<\/goals>\
+					<\/execution>\
+				<\/executions>\
+			<\/plugin>/g' pom.xml
 
 packageInBrackets=$(echo "$package_name" | tr . "/")
 
@@ -118,6 +119,7 @@ echo "{
 }" > src/main/resources/languageTranslations/de.json
 	
 sed -i 's/	<dependencies>/	<dependencies>\
+  <!-- Dependencies needed for multiLang-support -->\
 		<dependency>\
 			<groupId>com.jayway.jsonpath<\/groupId>\
 			<artifactId>json-path<\/artifactId>\
@@ -126,7 +128,8 @@ sed -i 's/	<dependencies>/	<dependencies>\
 			<groupId>org.projectlombok<\/groupId>\
 			<artifactId>lombok<\/artifactId>\
 			<optional>true<\/optional>\
-		<\/dependency>/g' pom.xml
+		<\/dependency>\
+    /g' pom.xml
 
 mkdir -p $working_dir/{controller,service,model,repository,aspect}
 
@@ -320,6 +323,7 @@ INSERT INTO language_translations(language_name)VALUES('de');
 	if [[ $* == *freemaker* ]]; then
 	mkdir -p $working_dir/controller
 sed -i 's/	<dependencies>/	<dependencies>\
+	<!-- Dependencies needed for supporting freemaker -->\
 		<dependency>\
            <groupId>org.springframework.boot<\/groupId>\
            <artifactId>spring-boot-starter-freemarker<\/artifactId>\
@@ -328,7 +332,8 @@ sed -i 's/	<dependencies>/	<dependencies>\
   		  	<groupId>org.apache.poi<\/groupId>\
     	  	<artifactId>poi<\/artifactId>\
     	  	<version>3.10-FINAL<\/version>\
-		<\/dependency>/g' pom.xml
+		<\/dependency>\
+		/g' pom.xml
 
 echo "
 " >> src/main/resources/application.properties
@@ -398,6 +403,7 @@ Added Sample Implementaion of the same using sample.ftl in resources/static fold
 	if [[ $* == *mysql* ]]; then
 	
 sed -i 's/	<dependencies>/	<dependencies>\
+	<!-- Dependencies needed for mysql -->\
 		<dependency>\
 			<groupId>com.h2database<\/groupId>\
 			<artifactId>h2<\/artifactId>\
@@ -416,7 +422,8 @@ sed -i 's/	<dependencies>/	<dependencies>\
 			<groupId>org.projectlombok<\/groupId>\
 			<artifactId>lombok<\/artifactId>\
 			<optional>true<\/optional>\
-		<\/dependency>/g' pom.xml
+		<\/dependency>\
+		/g' pom.xml
 
 		echo "
 " >> src/main/resources/application.properties
@@ -459,6 +466,7 @@ printf "\e[1;31mMake sure to update \e[46;5;12mtomcat-jndi-name and databaseName
 	if [[ $* == *oauth2* ]]; then
 	mkdir -p $working_dir/{controller,model,repository,security}
 sed -i 's/	<dependencies>/	<dependencies>\
+	<!-- Dependencies needed for OAuth2 -->\
 		<dependency>\
 			<groupId>org.springframework.boot<\/groupId>\
 			<artifactId>spring-boot-starter-security<\/artifactId>\
@@ -472,7 +480,8 @@ sed -i 's/	<dependencies>/	<dependencies>\
   		  <groupId>org.springframework.security.oauth<\/groupId>\
   		 	<artifactId>spring-security-oauth2<\/artifactId>\
    		 	<version>2.3.3.RELEASE<\/version>\
-		<\/dependency>/g' pom.xml
+		<\/dependency>\
+		/g' pom.xml
 
 echo "package "$package_name".controller;
 
