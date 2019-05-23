@@ -25,74 +25,66 @@ smallCaseWithUnderscore=$(dbVariable $smallCase)
 mkdir -p $working_test_dir/controller
 
 if [[ $1 == *--pluginCodeGen* ]]; then
-	packagingType=$(sed -n -e 's/.*<packaging>\(.*\)<\/packaging>.*/\1/p' pom.xml)
-	
-	sed -i '/<\/version>/,/<name>/{/<[^\/]*\/packaging>/d}' pom.xml
-	sed -i '/<\/project>/d' pom.xml
-	sed -i '/<finalName>/,/<\/packaging>/c<\/build>' pom.xml
-
-	sed -i "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>\
-	<\/build>\
-	<packaging>${packagingType}<\/packaging>\
-<\/project>/g" pom.xml
-
-printf '\e[1;35m%-6s\e[m' "Perform Ctrl+A and Ctrl+I to format pom.xml file
-"
-	if [ "$packagingType" == "war" ]; then
-		printf '\e[1;35m%-6s\e[m' "For war file, value in <finalName> is the context-path
-		"
-		printf '\e[1;36m%-6s\e[m' "Also make sure you extends SpringBootServletInitializer
-		"
-		printf '\e[1;36m%-6s\e[m' "spring.datasource.jndi-name in application.properties is necessary
-		"
-	elif [ "$packagingType" == "jar" ]; then
-		printf '\e[1;35m%-6s\e[m' "For jar file, server.servlet.context-path is needed along 
-		with <finalName>
-		"
-		printf '\e[1;36m%-6s\e[m' "instance's database credentials are needed if application.yml
-		is not added in the instance.
-		"
-	fi
-
-	if [[ $* == *sonar* ]]; then
 		nameLine=$(grep -n "<name>" pom.xml | cut -d ':' -f 1)
 
 		projName=$(sed -e "${nameLine}q;d" pom.xml | sed -e 's/<[^>]*>//g' | sed "s/^[ \t]*//" )
 
 		projNameInSmall=$(echo "$projName" | tr '[:upper:]' '[:lower:]')
 
-		pluginLine=$(grep -n "</plugin>" pom.xml | cut -d ':' -f 1)
-		sed -i "${pluginLine}i\
-		</plugin>\
+	newLine=\\n
+	packagingType=$(sed -n -e 's/.*<packaging>\(.*\)<\/packaging>.*/\1/p' pom.xml)
+	[ -z "$packagingType" ] && packagingType=war
+
+sed -i '/<\/project>/d' pom.xml
+sed -i '/<finalName>/,/<\/packaging>/c<\/build>' pom.xml
+
+sed -i "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>${newLine}\
+	<\/build>${newLine}\
+	<packaging>${packagingType}<\/packaging>${newLine}\
+<\/project>/g" pom.xml
+
+	if [ "$packagingType" == "war" ]; then
+		printf '\e[1;35m%-6s\e[m' "For war file, value in <finalName> is the context-path
+		"
+		printf '\e[1;36m%-6s\e[m' "Also make sure you extends SpringBootServletInitializer
+		"
+		printf '\e[1;36m%-6s\e[m' "spring.datasource.jndi-name in application.properties is necessary
+"
+	elif [ "$packagingType" == "jar" ]; then
+		printf '\e[1;35m%-6s\e[m' "For jar file, server.servlet.context-path is needed along 
+		with <finalName>
+		"
+		printf '\e[1;36m%-6s\e[m' "instance's database credentials are needed if application.yml
+		is not added in the instance.
+"
+	fi
+
+	if [[ $* == *sonar* ]]; then
+sed -i 's/		<\/plugin>/		<\/plugin>\
 			<plugin>\
-				<groupId>org.apache.maven.plugins</groupId>\
-				<artifactId>maven-surefire-plugin</artifactId>\
-			</plugin>\
+				<groupId>org.apache.maven.plugins<\/groupId>\
+				<artifactId>maven-surefire-plugin<\/artifactId>\
+			<\/plugin>\
 			<plugin>\
-	           <groupId>org.jacoco</groupId>\
-	           <artifactId>jacoco-maven-plugin</artifactId>\
-	           <version>0.8.0</version>\
+	           <groupId>org.jacoco<\/groupId>\
+	           <artifactId>jacoco-maven-plugin<\/artifactId>\
+	           <version>0.8.0<\/version>\
 	           <executions>\
 	               <execution>\
-	                   <id>default-prepare-agent</id>\
+	                   <id>default-prepare-agent<\/id>\
 	                   <goals>\
-	                       <goal>prepare-agent</goal>\
-	                   </goals>\
-	               </execution>\
+	                       <goal>prepare-agent<\/goal>\
+	                   <\/goals>\
+	               <\/execution>\
 	               <execution>\
-	                   <id>default-report</id>\
-	                   <phase>prepare-package</phase>\
+	                   <id>default-report<\/id>\
+	                   <phase>prepare-package<\/phase>\
 	                   <goals>\
-	                       <goal>report</goal>\
-	                   </goals>\
-	               </execution>\
-	           </executions>\
-       	</plugin>\
-		</plugins>\
-			<finalName>${projNameInSmall}</finalName>\
-	</build>" pom.xml
-
-	sed -i "$((pluginLine+1)),$((pluginLine+3))d" pom.xml
+	                       <goal>report<\/goal>\
+	                   <\/goals>\
+	               <\/execution>\
+	           <\/executions>\
+       	<\/plugin>/g' pom.xml
 
 packageInBrackets=$(echo "$package_name" | tr . "/")
 
@@ -111,7 +103,6 @@ sonar.java.binaries=target/classes
 sonar.java.test.binaries=./target/test-classes/${packageInBrackets}" > sonar-project.properties
 	
 	printf '\e[1;35m%-6s\e[m' "	Updated pom.xml with required plugins for sonar.
-	Perform Ctrl+A and Ctrl+I to format pom.xml file.
 	Added sonar-project.properties with required context
 "
 	fi
@@ -125,17 +116,17 @@ echo "{
 echo "{
 	\"hello\": \"Hallo\"
 }" > src/main/resources/languageTranslations/de.json
-		sed -i '26i\
-			\
+	
+sed -i 's/	<dependencies>/	<dependencies>\
 		<dependency>\
-      <groupId>com.jayway.jsonpath</groupId>\
-    	<artifactId>json-path</artifactId>\
-    </dependency>\
+			<groupId>com.jayway.jsonpath<\/groupId>\
+			<artifactId>json-path<\/artifactId>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>org.projectlombok</groupId>\
-			<artifactId>lombok</artifactId>\
-			<optional>true</optional>\
-		</dependency>' pom.xml
+			<groupId>org.projectlombok<\/groupId>\
+			<artifactId>lombok<\/artifactId>\
+			<optional>true<\/optional>\
+		<\/dependency>/g' pom.xml
 
 mkdir -p $working_dir/{controller,service,model,repository,aspect}
 
@@ -285,7 +276,7 @@ public class LanguageTranslationController
 	{
 		String localeJSONData = languageTranslationService.getTranslationLanguageData(locale);
 		
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(\"Requested Locale is: \" + locale + \"and Translation is: \"JsonPath.read(localeJSONData, \"$.hello\"));
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(\"Requested Locale is: \" + locale + \" and Translation is: \" + JsonPath.read(localeJSONData, \"$.hello\"));
 	}
 }" > "$working_dir/controller/LanguageTranslationController.java" 
 
@@ -328,17 +319,16 @@ INSERT INTO language_translations(language_name)VALUES('de');
 	fi
 	if [[ $* == *freemaker* ]]; then
 	mkdir -p $working_dir/controller
-		sed -i '26i\
-			\
+sed -i 's/	<dependencies>/	<dependencies>\
 		<dependency>\
-           <groupId>org.springframework.boot</groupId>\
-           <artifactId>spring-boot-starter-freemarker</artifactId>\
-       </dependency>\
+           <groupId>org.springframework.boot<\/groupId>\
+           <artifactId>spring-boot-starter-freemarker<\/artifactId>\
+       <\/dependency>\
        <dependency>\
-  		  	<groupId>org.apache.poi</groupId>\
-    	  	<artifactId>poi</artifactId>\
-    	  	<version>3.10-FINAL</version>\
-		</dependency>' pom.xml
+  		  	<groupId>org.apache.poi<\/groupId>\
+    	  	<artifactId>poi<\/artifactId>\
+    	  	<version>3.10-FINAL<\/version>\
+		<\/dependency>/g' pom.xml
 
 echo "
 " >> src/main/resources/application.properties
@@ -407,27 +397,26 @@ Added Sample Implementaion of the same using sample.ftl in resources/static fold
 
 	if [[ $* == *mysql* ]]; then
 	
-		sed -i '26i\
-		\
+sed -i 's/	<dependencies>/	<dependencies>\
 		<dependency>\
-			<groupId>com.h2database</groupId>\
-			<artifactId>h2</artifactId>\
-			<scope>test</scope>\
-		</dependency>\
+			<groupId>com.h2database<\/groupId>\
+			<artifactId>h2<\/artifactId>\
+			<scope>test<\/scope>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>mysql</groupId>\
-			<artifactId>mysql-connector-java</artifactId>\
-			<scope>runtime</scope>\
-		</dependency>\
+			<groupId>mysql<\/groupId>\
+			<artifactId>mysql-connector-java<\/artifactId>\
+			<scope>runtime<\/scope>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>org.springframework.boot</groupId>\
-			<artifactId>spring-boot-starter-data-jpa</artifactId>\
-		</dependency>\
+			<groupId>org.springframework.boot<\/groupId>\
+			<artifactId>spring-boot-starter-data-jpa<\/artifactId>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>org.projectlombok</groupId>\
-			<artifactId>lombok</artifactId>\
-			<optional>true</optional>\
-		</dependency>' pom.xml
+			<groupId>org.projectlombok<\/groupId>\
+			<artifactId>lombok<\/artifactId>\
+			<optional>true<\/optional>\
+		<\/dependency>/g' pom.xml
 
 		echo "
 " >> src/main/resources/application.properties
@@ -444,7 +433,7 @@ spring.datasource.url=jdbc:mysql://localhost:3306/*someDBName*?createDatabaseIfN
 spring.datasource.username=root\
 spring.datasource.password=root\
 spring.jpa.properties.hibernate.dialect = org.hibernate.dialect.MySQL5Dialect\
-server.servlet.context-path=/*someContextPath*' src/main/resources/application.properties
+server.servlet.context-path=/*someContextPath*\n' src/main/resources/application.properties
 
 mkdir -p src/test/resources
 
@@ -468,23 +457,22 @@ printf "\e[1;31mMake sure to update \e[46;5;12mtomcat-jndi-name and databaseName
 	fi
 
 	if [[ $* == *oauth2* ]]; then
-	mkdir -p $working_dir/{controller,service,model,repository,security}
-		sed -i '26i\
-		\
+	mkdir -p $working_dir/{controller,model,repository,security}
+sed -i 's/	<dependencies>/	<dependencies>\
 		<dependency>\
-			<groupId>org.springframework.boot</groupId>\
-			<artifactId>spring-boot-starter-security</artifactId>\
-		</dependency>\
+			<groupId>org.springframework.boot<\/groupId>\
+			<artifactId>spring-boot-starter-security<\/artifactId>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>org.springframework.security</groupId>\
-			<artifactId>spring-security-test</artifactId>\
-			<scope>test</scope>\
-		</dependency>\
-			<dependency>\
-  		    <groupId>org.springframework.security.oauth</groupId>\
-  		 	<artifactId>spring-security-oauth2</artifactId>\
-   		 	<version>2.3.3.RELEASE</version>\
-		</dependency>' pom.xml
+			<groupId>org.springframework.security<\/groupId>\
+			<artifactId>spring-security-test<\/artifactId>\
+			<scope>test<\/scope>\
+		<\/dependency>\
+		<dependency>\
+  		  <groupId>org.springframework.security.oauth<\/groupId>\
+  		 	<artifactId>spring-security-oauth2<\/artifactId>\
+   		 	<version>2.3.3.RELEASE<\/version>\
+		<\/dependency>/g' pom.xml
 
 echo "package "$package_name".controller;
 
@@ -521,12 +509,12 @@ import java.util.Optional;
 
 import org.springframework.data.repository.CrudRepository;
 
-import "$package_name".model.User;
+import "$package_name".model.UserOAuth2;
 
-public interface UserRepository extends CrudRepository<User, Long> 
+public interface UserOAuth2Repository extends CrudRepository<UserOAuth2, Long> 
 {
-	Optional<User> findByEmail(String email);
-}" > "$working_dir/repository/UserRepository.java"
+	Optional<UserOAuth2> findByEmail(String email);
+}" > "$working_dir/repository/UserOAuth2Repository.java"
 echo "package "$package_name".model;
 
 import java.util.ArrayList;
@@ -552,8 +540,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name=\"user\")
-public class User implements UserDetails
+@Table(name=\"user-oauth2\")
+public class UserOAuth2 implements UserDetails
 {
 	private static final long serialVersionUID = 8734450729169071352L;
 
@@ -620,7 +608,7 @@ public class User implements UserDetails
 	public boolean isEnabled() {
 		return enabled;
 	}
-}" > "$working_dir/model/User.java"
+}" > "$working_dir/model/UserOAuth2.java"
 
 			echo "package "$package_name".security;
 
@@ -839,17 +827,17 @@ import org.springframework.security.oauth2.common.OAuth2AccessToken;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.security.oauth2.provider.token.TokenEnhancer;
 
-import "$package_name".model.User;
+import "$package_name".model.UserOAuth2;
 
 public class CustomTokenConverter implements TokenEnhancer
 {
    @Override
   public OAuth2AccessToken enhance(OAuth2AccessToken accessToken, OAuth2Authentication authentication)
  {
-       User user = (User) authentication.getPrincipal();
+       UserOAuth2 loggedInUser = (UserOAuth2) authentication.getPrincipal();
        final Map<String, Object> additionalInfo = new HashMap<>();
 
-       additionalInfo.put(\"name\", user.getUsername());
+       additionalInfo.put(\"name\", loggedInUser.getUsername());
 
        ((DefaultOAuth2AccessToken) accessToken).setAdditionalInformation(additionalInfo);
 
@@ -886,19 +874,19 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import "$package_name".model.User;
-import "$package_name".repository.UserRepository;
+import "$package_name".model.UserOAuth2;
+import "$package_name".repository.UserOAuth2Repository;
 
 @Service(\"userDetailsService\")
 public class UserService implements UserDetailsService
 {
 	@Autowired
-	private UserRepository userRepository;		
+	private UserOAuth2Repository userOAuth2Repository;		
 	
 	@Override
 	public UserDetails loadUserByUsername(String email) 
 	{
-		Optional<User> user=userRepository.findByEmail(email);
+		Optional<UserOAuth2> user= userOAuth2Repository.findByEmail(email);
 		if(!user.isPresent())
 		{
 			throw new UsernameNotFoundException(null);
@@ -907,6 +895,19 @@ public class UserService implements UserDetailsService
 	}
 }" > "$working_dir/security/UserService.java"
 	
+	echo "package "$package_name".repository;
+
+import java.util.Optional;
+
+import org.springframework.data.repository.CrudRepository;
+
+import com.dheeraj.cms.proj.model.UserOAuth2;
+
+public interface UserOAuth2Repository extends CrudRepository<UserOAuth2, Long> 
+{
+	Optional<UserOAuth2> findByEmail(String email);
+}" > "$working_dir/repository/UserOAuth2Repository.java"
+
 	webSecurityConfigurer="package "$package_name".security;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1003,6 +1004,7 @@ mkdir -p $working_dir/controller
   controller="package "$package_name".controller;
 
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 "
 
 	if [[ $* == *--need-sample* ]]; then
@@ -1019,6 +1021,7 @@ import "$package_name".service."${fileName}"Service;
 	fi
 
 controller+="
+@Transactional
 @RestController
 public class "${fileName}"Controller 
 {

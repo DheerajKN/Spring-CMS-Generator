@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.1.0] - 2019-05-23
+
+### Added
+
+- Optimized Code for Better Processing of the system
+- Better logs for easy changes
+
+### Changed
+
+- Now no need to run Ctrl+A and Ctrl+I to format xml file on --pluginCodeGen run
+- Now all the dependencies will be added at the top for better visibility.
+- Now user can know which set of dependencies are added for which extension
+
 ## [1.0.7] - 2019-05-21
 
 ### Added
