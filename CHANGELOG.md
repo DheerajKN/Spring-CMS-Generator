@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 - Optimized Code for Better Processing of the system
 - Better logs for easy changes
+- Bugs Resolved for --pluginCodeGen oauth2 flag
 
 ### Changed
 

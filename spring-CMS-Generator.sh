@@ -499,8 +499,11 @@ public class OAuth2Controller {
 	@Autowired
 	private ConsumerTokenServices tokenServices;
 	
+	@Autowired
+	private HttpServletRequest request;
+
 	@PostMapping(\"/logout\")
-    public ResponseEntity<Void> logout(HttpServletRequest request)
+    public ResponseEntity<Void> logout()
     {
        String authorization = request.getHeader(\"Authorization\");
        if (authorization != null && authorization.contains(\"Bearer\"))
@@ -549,7 +552,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name=\"user-oauth2\")
+@Table(name=\"user_oauth2\")
 public class UserOAuth2 implements UserDetails
 {
 	private static final long serialVersionUID = 8734450729169071352L;
@@ -689,6 +692,7 @@ import org.springframework.security.oauth2.config.annotation.web.configurers.Aut
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
 import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
 import org.springframework.security.oauth2.provider.token.store.JdbcTokenStore;
 import org.springframework.http.HttpMethod;
 
@@ -781,6 +785,16 @@ oauth2Config+="
 
 	@Autowired
 	private AuthenticationManager authenticationManager;
+
+		@Bean
+    public PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+		@Bean
+    public TokenStore tokenStore() {
+        return new InMemoryTokenStore();
+    }
 	
 	@Autowired
 	private TokenStore tokenStore;
@@ -887,7 +901,7 @@ import "$package_name".model.UserOAuth2;
 import "$package_name".repository.UserOAuth2Repository;
 
 @Service(\"userDetailsService\")
-public class UserService implements UserDetailsService
+public class UserOAuth2Service implements UserDetailsService
 {
 	@Autowired
 	private UserOAuth2Repository userOAuth2Repository;		
@@ -902,7 +916,7 @@ public class UserService implements UserDetailsService
 		}
 		return user.get();	
 	}
-}" > "$working_dir/security/UserService.java"
+}" > "$working_dir/security/UserOAuth2Service.java"
 	
 	echo "package "$package_name".repository;
 
@@ -932,7 +946,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.OAuth2ClientContext;
 import org.springframework.security.oauth2.client.filter.OAuth2ClientContextFilter;
-import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;"
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;
+"
 
 if [[ $* == *oauth2-db* ]]; then
 webSecurityConfigurer+="
