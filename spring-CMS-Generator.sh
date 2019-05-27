@@ -310,15 +310,23 @@ public class LanguageTranslationService
 		}		
 	}
 }" > "$working_dir/service/LanguageTranslationService.java" 
-		printf '\e[1;34m%-6s\e[m \e[1;36m%-6s\e[m' "Generated en, de json files
+		printf '\e[1;31m%-6s\e[m' "Generated en, de json files
 Updated pom.xml with required imports for multiLang support
 Generated LanguageTranslations model and it's Repository method
 LanguageChecker Aspect file
 Sample Implementation of Multi-Lang using LanguageTranslationController and LanguageTranslationService
-Add these lines in this file -> import.sql" "
-INSERT INTO language_translations(language_name)VALUES('en');
-INSERT INTO language_translations(language_name)VALUES('de');
-"
+Added mysql lines to this file in both test and main folders-> import.sql
+" 
+
+for i in main test; do
+    
+echo "
+" >> src/$i/resources/import.sql
+
+sed -i -e '$a\
+INSERT INTO language_translations(language_name)VALUES(\x27en\x27);\
+INSERT INTO language_translations(language_name)VALUES(\x27de\x27);' src/$i/resources/import.sql
+done
 	fi
 	if [[ $* == *freemaker* ]]; then
 	mkdir -p $working_dir/controller
@@ -975,21 +983,25 @@ public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
     }
 }"
 
-printf '\e[1;38m%-6s\e[m' "Generated Security Folder with all required files
-Updated pom.xml files with required dependencies
-Added Sample Controller
-Generated User Model and Repo to support OAuth2 dependency."
+printf '\e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m' "OAuth2-db configuration has added mysql lines in" "import.sql" "with OAuth Client Credentials are user_name:" "admin" "and password:" "admin123
+" 
 
-printf '\e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;32m%-6s\e[m' "Make sure to write this mysql lines in" "import.sql" "where OAuth Client Credentials are user_name:" "admin" "and password:" "admin123" "
+for i in main test; do
+    
+echo "
+" >> src/$i/resources/import.sql
 
-create table if not exists oauth_client_details(client_id VARCHAR(255) PRIMARY KEY,resource_ids VARCHAR(255),client_secret VARCHAR(255),scope VARCHAR(255),authorized_grant_types VARCHAR(255),web_server_redirect_uri VARCHAR(255),authorities VARCHAR(255),access_token_validity INTEGER,refresh_token_validity INTEGER,additional_information VARCHAR(4096),autoapprove VARCHAR(255));
-
-create table if not exists oauth_access_token (token_id VARCHAR(255),token BLOB,authentication_id VARCHAR(255) PRIMARY KEY,user_name VARCHAR(255),client_id VARCHAR(255),authentication BLOB,refresh_token VARCHAR(255));
-
-create table if not exists oauth_refresh_token (token_id VARCHAR(255),token BLOB,authentication BLOB);
-
-INSERT INTO oauth_client_details(client_id, client_secret, scope, authorized_grant_types,web_server_redirect_uri, authorities, access_token_validity,refresh_token_validity, additional_information, autoapprove)VALUES('admin', '{bcrypt}\$2a\$10\$bTqEsnkat8dqmJGYIKpEaeSYTHmfw/cKXrJe5dpRCBaAjzFloLDcO', 'admin,read,write','password,authorization_code,refresh_token', NULL, NULL, 86400, 0, NULL, TRUE);
-"
+sed -i '1i\
+\
+create table if not exists oauth_client_details(client_id VARCHAR(255) PRIMARY KEY,resource_ids VARCHAR(255),client_secret VARCHAR(255),scope VARCHAR(255),authorized_grant_types VARCHAR(255),web_server_redirect_uri VARCHAR(255),authorities VARCHAR(255),access_token_validity INTEGER,refresh_token_validity INTEGER,additional_information VARCHAR(4096),autoapprove VARCHAR(255));\
+\
+create table if not exists oauth_access_token (token_id VARCHAR(255),token BLOB,authentication_id VARCHAR(255) PRIMARY KEY,user_name VARCHAR(255),client_id VARCHAR(255),authentication BLOB,refresh_token VARCHAR(255));\
+\
+create table if not exists oauth_refresh_token (token_id VARCHAR(255),token BLOB,authentication BLOB);\
+\
+INSERT INTO oauth_client_details(client_id, client_secret, scope, authorized_grant_types,web_server_redirect_uri, authorities, access_token_validity,refresh_token_validity, additional_information, autoapprove)VALUES(\x27admin\x27, \x27{bcrypt}\$2a\$10\$bTqEsnkat8dqmJGYIKpEaeSYTHmfw/cKXrJe5dpRCBaAjzFloLDcO\x27, \x27admin,read,write\x27,\x27password,authorization_code,refresh_token\x27, NULL, NULL, 86400, 0, NULL, TRUE);\
+' src/$i/resources/import.sql
+done
 
 else
 webSecurityConfigurer+="
@@ -1019,6 +1031,12 @@ public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
 }"
 
 echo "$webSecurityConfigurer" > "$working_dir/security/WebSecurityConfigurer.java"
+
+
+printf '\e[1;38m%-6s\e[m' "Generated Security Folder with all required files
+Updated pom.xml files with required dependencies
+Added Sample Controller
+Generated User Model and Repo to support OAuth2 dependency."
 fi
 
 	fi

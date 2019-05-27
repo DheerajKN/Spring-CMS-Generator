@@ -107,3 +107,4 @@ Then the script will automatically ask you some questions that will then generat
 # Further Developments
 
 - Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
+- --import-sql for `m` flag will auto-generate commented insert script and add it to the end of import.sql file for both main and test environments.

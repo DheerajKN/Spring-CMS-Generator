@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Optimized Code for Better Processing of the system
 - Better logs for easy changes
 - Bugs Resolved for --pluginCodeGen oauth2 flag
+- Now user has no need to manually add essential sql files during --pluginCodeGen, script will automatically do it
 
 ### Changed
 
