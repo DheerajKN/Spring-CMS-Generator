@@ -18,6 +18,12 @@ function dbVariable()
   echo "$smallCaseWithUnderscore"
 }
 
+function importSqlFormatter()
+{
+  local sqlType="$(cut -d':' -f2 <<<"${1::-1}")"
+  if [[ "$sqlType" == String ]]; then echo "'$1',"; else echo "$1,"; fi
+}
+
 fileName=$(echo "$2" | sed 's/^./\U&\E/')
 smallCase=$(javaVariable $fileName)   
 smallCaseWithUnderscore=$(dbVariable $smallCase)
@@ -1168,13 +1174,16 @@ public class ${fileName}
 	
 "
 
+sqlInitialData="INSERT INTO $smallCaseWithUnderscore("
+sqlRestData='VALUES('
 while true; do
   printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out"
   printf "\n"
-   read -e -p "propName in camelCase: " propName
-     [[ -n "$propName" ]] || break
+  read -e -p "propName in camelCase: " propName
+			[[ -n "$propName" ]] || break
     propName=$(javaVariable $propName)
     prop_Name=$(dbVariable $propName) 
+		sqlInitialData+="${prop_Name},"
 options=("int" "String" "long" "boolean")
 
 for ((i=0;i<${#options[@]};i++)); do 
@@ -1186,6 +1195,7 @@ while true; do
   read -e -p 'Enter dataType of the property: ' opt
 if [ "$opt" -ge 1 -a "$opt" -le 4 ]; then   
     dT=${options[$opt-1]}	
+		sqlRestData+=$(importSqlFormatter "<${propName}:${dT}>")
     break;
    fi
 done
@@ -1233,14 +1243,16 @@ done
 
 while true; do
 
-	read -e -p 'Enter the relationship to be used in this model: ' opt
+	printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out from relationalMapping
+"
+	read -e -p 'Enter the relationship type from the above options to be added in this model: ' opt
 	[[ -n "$opt" ]] || break
 	if [ "$opt" -ge 4 -a "$opt" -le 1 ]; then   
 		break;
    	fi
 	opt=${options[$opt-1]}	
 	read -e -p 'Type the Model Name that you want to relate this model to: ' relatedModel
-		declare -c relatedModel="$relatedModel"
+		relatedModel=$(echo "$relatedModel" | sed 's/^./\U&\E/')
 		smallCaseOfRelatedModel=$(javaVariable $relatedModel)
 		smallCaseOfRelatedModelWithUnderscore=$(dbVariable $smallCaseOfRelatedModel)
 
@@ -1250,6 +1262,8 @@ case $opt in
 	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
 	private $relatedModel $smallCaseOfRelatedModel;
 "
+	sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
+	sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
 
 	modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
@@ -1291,6 +1305,9 @@ case $opt in
 	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
 	private $relatedModel $smallCaseOfRelatedModel;
 "
+	sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
+	sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
+
 	modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
 	
@@ -1307,6 +1324,26 @@ model+="}"
 echo "$model" > "$working_dir/model/${fileName}.java"
 echo "$modelInPrint"
 
+if [[ $* == *--import-sql* ]]; then 
+echo "" >> src/main/resources/import.sql
+echo "" >> src/test/resources/import.sql
+	for flag in $*; do
+		if [[ $flag == -times* ]]; then 
+			flagVal=${flag:7}
+			flagVal=${flagVal:-1}
+			break
+		fi
+		flagVal=${flagVal:-1}
+	done
+
+	for ((n=0;n<$flagVal;n++)); do
+		finalSQLData+="${sqlInitialData::-1})${sqlRestData::-1});\n"
+	done
+
+sed -i "\$a/*${finalSQLData}*/" src/main/resources/import.sql
+sed -i "\$a/*${finalSQLData}*/" src/test/resources/import.sql
+fi
+
 #Repository Code
 options=("CrudRepository" "JpaRepository")
 
@@ -1320,7 +1357,7 @@ while true; do
 if [ "$opt" -ge 1 -a "$opt" -le 2 ]; then   
     repo=${options[$opt-1]}	
     break;
-   fi
+  fi
 done
 
 repoCode="package "$package_name".repository;

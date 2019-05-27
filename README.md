@@ -22,13 +22,31 @@ In the Spring Framework there are basically 3 main components RestController, Mo
 
     ~/Desktop/spring-CMS-Generator.sh cms User
 
-Using this command which automatically creates UserController, User, UserService files along with all the imports and needed Auto-wiring among them. You can create any kind of combinations with these 3 keywords c, m, s like you can have create only Service and Model using **ms** etc.
+Using this command which automatically creates UserController, User, UserService files along with all the imports and needed Auto-wiring among them. You can create any kind of combinations with these 3 keywords c, m, s like you can have create only Service and Model using **ms** etc. and the necessary Auto-wiring and file imports are handled.
+
+## Extra Flags in Controller Component
 
 - **--need-sample**
 
   For controller we have a seperate flag that auto-generates certain code-snippets that is widely used in controller like generating **GET, POST, PUT, DELETE request mapping** along with description on how to **fetch data via Request Body, PathVariable, RequestParam** or **RequestHeader.**
 
-        ~/Desktop/spring-CMS-Generator.sh c User --need-sample
+        ~/Desktop/spring-CMS-Generator.sh m User --need-sample
+
+## Extra Flags in Model Component
+
+- **--import-sql**
+
+  For model we have a seperate flag that auto-generates commented insert sql statments as per the `property Name` and `data Type` that is being passed while generation into import.sql for both main and test environments.
+
+        ~/Desktop/spring-CMS-Generator.sh m User --import-sql
+
+  - **-times**
+
+    `--import-sql` flag has an extension flag `-times` we will replicate the number of times the insert statement will be created in import.sql. All the insert statement will be under multiLine comment
+
+          ~/Desktop/spring-CMS-Generator.sh m User --import-sql -times=5
+
+    The above statement will create insert statement for `User` entity 5 times in import.sql
 
 ### Extra Features in Model component
 

@@ -11,10 +11,12 @@ All notable changes to this project will be documented in this file.
 - Optimized Code for Better Processing of the system
 - Better logs for easy changes
 - Bugs Resolved for --pluginCodeGen oauth2 flag
-- Now user has no need to manually add essential sql files during --pluginCodeGen, script will automatically do it
+- --import-sql flag to model entity which create insert sql statement and add it to import.sql file in both main and test environments present under resources folder.
+- -times is an extension to --import-sql flag that will add the same insert statement n times as mentioned along with the flag under a single multLine comment in both main and test environments
 
 ### Changed
 
+- Now user has no need to manually add essential sql files during --pluginCodeGen, script will automatically do it
 - Now no need to run Ctrl+A and Ctrl+I to format xml file on --pluginCodeGen run
 - Now all the dependencies will be added at the top for better visibility.
 - Now user can know which set of dependencies are added for which extension
