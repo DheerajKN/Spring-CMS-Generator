@@ -21,6 +21,23 @@ function importSqlFormatter() {
 	if [[ "$sqlType" == String ]]; then echo "'$1',"; else echo "$1,"; fi
 }
 
+folder_values() {
+	package_ext=""
+	package_ext=$3
+	for flag in $2; do
+		if [[ $flag == $1* ]]; then
+			package_intent_ext=${flag:11}
+			if [[ "${package_intent_ext:0:1}" == "." ]]; then
+				[ "${package_intent_ext: -1}" == "." ] && package_ext=${package_intent_ext%?}${package_ext} || package_ext=${package_intent_ext}
+			else
+				echo -e "\033[1;31mfolder name must start with ."
+				exit 1
+			fi
+			break
+		fi
+	done
+}
+
 fileName=$(echo "$2" | sed 's/^./\U&\E/')
 smallCase=$(javaVariable $fileName)
 smallCaseWithUnderscore=$(dbVariable $smallCase)
@@ -1044,8 +1061,9 @@ Generated User Model and Repo to support OAuth2 dependency."
 	fi
 fi
 if [[ $1 == *"c"* ]]; then
-	mkdir -p $working_dir/controller
-	controller="package "$package_name".controller;
+	folder_values --c-folder "$*" .controller
+	mkdir -p $working_dir${package_ext//.//}
+	controller="package "$package_name${package_ext}";
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.transaction.annotation.Transactional;
@@ -1059,11 +1077,13 @@ import org.springframework.web.bind.annotation.*;
 	fi
 
 	if [[ $1 == *"s"* ]]; then
+		folder_values --s-folder "$*" .service
 		controller+="import org.springframework.beans.factory.annotation.Autowired;
-import "$package_name".service."${fileName}"Service;
+import "$package_name${package_ext}.${fileName}"Service;
 		"
 	fi
 
+	folder_values --c-folder "$*" .controller
 	controller+="
 @Transactional
 @RestController
@@ -1115,13 +1135,13 @@ public class "${fileName}"Controller
 
 	if [[ $* == *--overwrite* ]]; then
 		echo "$controller" >"$working_dir/controller/${fileName}Controller.java"
-	elif [ -f "$working_dir/controller/${fileName}Controller.java" ] && [ -s "$working_dir/controller/${fileName}Controller.java" ]; then
+	elif [ -f "$working_dir${package_ext//.//}/${fileName}Controller.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}Controller.java" ]; then
 		echo -e "\033[1;31mIt seems the CONTROLLER file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another controller using c <newControllerName>tag
 	or overwrite current one using only c <oldControllerName> --overwrite flag"
 	else
-		echo "$controller" >"$working_dir/controller/${fileName}Controller.java"
+		echo "$controller" >"$working_dir${package_ext//.//}/${fileName}Controller.java"
 	fi
 	#Create Test file for the same
 
@@ -1140,13 +1160,14 @@ public class "${fileName}"ControllerTest
 fi
 
 if [[ $1 == *"m"* ]]; then
-	mkdir -p $working_dir/model
-	if [ -f "$working_dir/model/${fileName}.java" ] && [ -s "$working_dir/model/${fileName}.java" ]; then
+	folder_values --m-folder "$*" .model
+	mkdir -p $working_dir${package_ext//.//}
+	if [ -f "$working_dir${package_ext//.//}/${fileName}.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}.java" ]; then
 		echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another model using m <newModelName> tag"
 	else
-		model="package "$package_name".model;
+		model="package "$package_name${package_ext}";
 
 import javax.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -1312,7 +1333,7 @@ public class ${fileName}
 
 		model+="}"
 
-		echo "$model" >"$working_dir/model/${fileName}.java"
+		echo "$model" >"$working_dir${package_ext//.//}/${fileName}.java"
 		echo "$modelInPrint"
 
 		if [[ $* == *--import-sql* ]]; then
