@@ -1370,7 +1370,8 @@ public class ${fileName}
 			fi
 		done
 
-		repoCode="package "$package_name".repository;
+		folder_values --r-folder "$*" .repository
+		repoCode="package "$package_name${package_ext}";
 "
 
 		case $repo in
@@ -1382,28 +1383,33 @@ public class ${fileName}
 			;;
 		esac
 
+		folder_values --m-folder "$*" .model
 		repoCode+="
-import "$package_name.model.${fileName}";
+import "$package_name${package_ext}"."${fileName}";
 
 public interface "${fileName}"Repository extends "$repo"<"${fileName}", Long> 
 {
 
 }"
-		mkdir -p $working_dir/repository
-		echo "$repoCode" >"$working_dir/repository/${fileName}Repository.java"
+		folder_values --r-folder "$*" .repository
+		mkdir -p $working_dir${package_ext//.//}
+		echo "$repoCode" >"$working_dir${package_ext//.//}/${fileName}Repository.java"
 	fi
 fi
 
 if [[ $1 == *"s"* ]]; then
-	mkdir -p $working_dir/service
-	service="package "$package_name".service;
+
+	folder_values --s-folder "$*" .service
+	mkdir -p $working_dir${package_ext//.//}
+	service="package "$package_name${package_ext}";
 
 import org.springframework.stereotype.Service;
 "
 
 	if [[ $1 == *"m"* ]]; then
+		folder_values --r-folder "$*" .repository
 		service+="import org.springframework.beans.factory.annotation.Autowired;
-import "$package_name".repository."${fileName}"Repository;
+import "$package_name${package_ext}"."${fileName}"Repository;
 		"
 	fi
 
@@ -1418,20 +1424,22 @@ public class "${fileName}"Service
 	fi
 	service+="
 }"
+	folder_values --s-folder "$*" .service
 	if [[ $* == *--overwrite* ]]; then
-		echo "$service" >"$working_dir/service/${fileName}Service.java"
-	elif [ -f "$working_dir/service/${fileName}Service.java" ] && [ -s "$working_dir/service/${fileName}Service.java" ]; then
+		echo "$service" >"$working_dir${package_ext//.//}/${fileName}Service.java"
+	elif [ -f "$working_dir${package_ext//.//}/${fileName}Service.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}Service.java" ]; then
 		echo -e "\033[1;31mIt seems the SERVICE file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another model using s <newServiceName> tag
 	or overwrite current one using only s <oldServiceName> --overwrite flag"
 	else
-		echo "$service" >"$working_dir/service/${fileName}Service.java"
+		echo "$service" >"$working_dir${package_ext//.//}/${fileName}Service.java"
 	fi
 fi
 
 if [[ $1 == *"a"* ]]; then
-	mkdir -p $working_dir/aspect
+	folder_values --a-folder "$*" .aspect
+	mkdir -p $working_dir${package_ext//.//}
 	elemtype_options=("ANNOTATION_TYPE" "CONSTRUCTOR" "FIELD" "LOCAL_VARIABLE" "METHOD" "PACKAGE" "PARAMETER" "TYPE")
 
 	for ((i = 0; i < ${#elemtype_options[@]}; i++)); do
@@ -1462,7 +1470,7 @@ if [[ $1 == *"a"* ]]; then
 		fi
 	done
 
-	echo "package "$package_name".aspect;
+	echo "package "$package_name${package_ext}";
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -1473,9 +1481,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy."$retenPolicy")
 public @interface "${fileName}" {
 
-}" >"$working_dir/aspect/${fileName}.java"
+}" >"$working_dir${package_ext//.//}/${fileName}.java"
 
-	echo "package "$package_name".aspect;
+	echo "package "$package_name${package_ext}";
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -1486,11 +1494,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class ${fileName}Aspect 
 {
-	@Around(\"@annotation($package_name.aspect.${fileName})\")
+	@Around(\"@annotation($package_name${package_ext}.${fileName})\")
 	public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
 		Object u = joinPoint.getArgs()[0];
 		return joinPoint.proceed();
 	}
-}" >"$working_dir/aspect/${fileName}Aspect.java"
+}" >"$working_dir${package_ext//.//}/${fileName}Aspect.java"
 
 fi

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.2.5] - 2019-06-26
+
+### Added
+
+- added --c-folder flag for `c` that helps in generating `controller` file at custom position in place of pre-defined controller folder.
+- added --m-folder flag for `m` that helps in generating `model` file at custom position in place of pre-defined model folder.
+- added --s-folder flag for `s` that helps in generating `service` file at custom position in place of pre-defined service folder.
+- added --r-folder flag for `m` that helps in generating `repository` file at custom position in place of pre-defined repository folder.
+- added --a-folder flag for `a` that helps in generating `aspect` file at custom position in place of pre-defined aspect folder.
+
 ## [1.1.0] - 2019-05-23
 
 ### Added

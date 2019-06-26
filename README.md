@@ -6,7 +6,7 @@ Spring Controller Model Service Generator is a easy to use Command Line Based co
 
 # Spring-CMS-Generator.sh
 
-A simple cli based Spring Boot code generator that creates required along with importing adequate imports / dependencies. Also automatically @Autowires them as per the relations.
+A simple cli based Spring Boot code generator that creates required along with importing adequate imports / dependencies. Also automatically @Autowires them as per the relations. Along with the freedom of setting custom directories.
 
 After pulling the script make sure to provide adequate permissions
 
@@ -122,7 +122,24 @@ Create your Aspects as easy as calling a script
 
 Then the script will automatically ask you some questions that will then generate the needed code snippets that can used anywhere in the project.
 
+# Custom Directory
+
+- In case if you want to generate `controller` in custom path rather than pre-defined location you can use `--c-folder=.custom.controller`
+- In case if you want to generate `service` in custom path rather than pre-defined location you can use `--s-folder=.custom.service`
+- In case if you want to generate `model` in custom path rather than pre-defined location you can use `--c-folder=.custom.model`
+- In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--c-folder=.custom.repository`
+- In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--c-folder=.custom.aspect`
+
+  ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect
+
+## Rules for Custom Directory
+
+- In first flag passed is only of controller `c` and `--s-folder` is passed with value no changes will occur.
+- folder flag value should always start with `.`
+- If folder flag value ends and starts with `.` like `.custom.` then generated directory is `/custom/controller` as in pre-defined controller directory for c flag.
+- If folder flag value starts with `.` and doesn't end with `.` like `.tables` then generated directory is `/tables`
+
 # Further Developments
 
 - Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
-- --import-sql for `m` flag will auto-generate commented insert script and add it to the end of import.sql file for both main and test environments.
+- In the case of Aspect type as PARAMETER @Around statement will be replaced with another line
