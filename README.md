@@ -1,12 +1,12 @@
 # Spring CMS Generator
 
-[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/) [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php) [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/) [![written-in-shell-script](https://img.shields.io/badge/</>-Shell%20Script-<COLOR>.svg)](https://shields.io/) [![current-version](https://img.shields.io/badge/version-1.0.7-blue.svg)](https://shields.io/) [![native-support](https://img.shields.io/badge/native--support-Linux%20%7C%20MacOS-lightgrey.svg)](https://shields.io/)
+[![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/) [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php) [![Bash Shell](https://badges.frapsoft.com/bash/v1/bash.png?v=103)](https://github.com/ellerbrock/open-source-badges/) [![written-in-shell-script](https://img.shields.io/badge/</>-Shell%20Script-<COLOR>.svg)](https://shields.io/) [![current-version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://shields.io/) [![native-support](https://img.shields.io/badge/native--support-Linux%20%7C%20MacOS-lightgrey.svg)](https://shields.io/)
 
 Spring Controller Model Service Generator is a easy to use Command Line Based code generator tool that handles most of the initial heavy-lighting for you when productivity is at essence. **Inspired from loopback.**
 
 # Spring-CMS-Generator.sh
 
-A simple cli based Spring Boot code generator that creates required along with importing adequate imports / dependencies. Also automatically @Autowires them as per the relations.
+A simple cli based Spring Boot code generator that creates required along with importing adequate imports / dependencies. Also automatically @Autowires them as per the relations. Along with the freedom of setting custom directories.
 
 After pulling the script make sure to provide adequate permissions
 
@@ -22,13 +22,31 @@ In the Spring Framework there are basically 3 main components RestController, Mo
 
     ~/Desktop/spring-CMS-Generator.sh cms User
 
-Using this command which automatically creates UserController, User, UserService files along with all the imports and needed Auto-wiring among them. You can create any kind of combinations with these 3 keywords c, m, s like you can have create only Service and Model using **ms** etc.
+Using this command which automatically creates UserController, User, UserService files along with all the imports and needed Auto-wiring among them. You can create any kind of combinations with these 3 keywords c, m, s like you can have create only Service and Model using **ms** etc. and the necessary Auto-wiring and file imports are handled.
+
+## Extra Flags in Controller Component
 
 - **--need-sample**
 
   For controller we have a seperate flag that auto-generates certain code-snippets that is widely used in controller like generating **GET, POST, PUT, DELETE request mapping** along with description on how to **fetch data via Request Body, PathVariable, RequestParam** or **RequestHeader.**
 
-        ~/Desktop/spring-CMS-Generator.sh c User --need-sample
+        ~/Desktop/spring-CMS-Generator.sh m User --need-sample
+
+## Extra Flags in Model Component
+
+- **--import-sql**
+
+  For model we have a seperate flag that auto-generates commented insert sql statments as per the `property Name` and `data Type` that is being passed while generation into import.sql for both main and test environments.
+
+        ~/Desktop/spring-CMS-Generator.sh m User --import-sql
+
+  - **-times**
+
+    `--import-sql` flag has an extension flag `-times` we will replicate the number of times the insert statement will be created in import.sql. All the insert statement will be under multiLine comment
+
+          ~/Desktop/spring-CMS-Generator.sh m User --import-sql -times=5
+
+    The above statement will create insert statement for `User` entity 5 times in import.sql
 
 ### Extra Features in Model component
 
@@ -64,7 +82,7 @@ When you are using `m` flag after the creation of properties to the entity file 
 
 This is a new feature added in the script unlike from that seen in loopback. This flag when added right after invocation of the script along with few built-in commands autogenerates pre-defined controllers and injects subsequent properties along with maven dependencies.
 
-    ~/Desktop/spring-CMS-generator.sh --pluginCodeGen oauth2 mysql multiLang-support freemaker sonar
+    ~/Desktop/spring-CMS-generator.sh --pluginCodeGen oauth2 mysql multiLang-support freemaker sonar internationalization
 
 Currently supported plugins for - -pluginCodeGen
 
@@ -88,6 +106,10 @@ Currently supported plugins for - -pluginCodeGen
 
   On entering this flag, automatically the entire spring boot application will updated to `support multiple languages` to an extent using `some pre-defined code snippets that would added to resources, model and example controller and service` that works seamlessly.
 
+- **internationalization**
+
+  On entering this flag, it automatically generates configuration files inside the spring boot project which will make the system automatically support localization of messages based on the value passed in `Accept-Language` header per request along with a sample controller to demostrate how to use it.
+
 - **sonar**
 
   Adds `sonarqube plugin` to pom.xml and adds sonar.properties file into your project that would be sufficient for the sonarqube component to `generate analytics for your project.`
@@ -104,6 +126,24 @@ Create your Aspects as easy as calling a script
 
 Then the script will automatically ask you some questions that will then generate the needed code snippets that can used anywhere in the project.
 
+# Custom Directory
+
+- In case if you want to generate `controller` in custom path rather than pre-defined location you can use `--c-folder=.custom.controller`
+- In case if you want to generate `service` in custom path rather than pre-defined location you can use `--s-folder=.custom.service`
+- In case if you want to generate `model` in custom path rather than pre-defined location you can use `--c-folder=.custom.model`
+- In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--c-folder=.custom.repository`
+- In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--c-folder=.custom.aspect`
+
+  ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect
+
+## Rules for Custom Directory
+
+- In first flag passed is only of controller `c` and `--s-folder` is passed with value no changes will occur.
+- folder flag value should always start with `.`
+- If folder flag value ends and starts with `.` like `.custom.` then generated directory is `/custom/controller` as in pre-defined controller directory for c flag.
+- If folder flag value starts with `.` and doesn't end with `.` like `.tables` then generated directory is `/tables`
+
 # Further Developments
 
 - Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
+- In the case of Aspect type as PARAMETER @Around statement will be replaced with another line

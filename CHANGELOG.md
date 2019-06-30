@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.2.5] - 2019-06-26
+
+### Added
+
+- added --c-folder flag for `c` that helps in generating `controller` file at custom position in place of pre-defined controller folder.
+- added --m-folder flag for `m` that helps in generating `model` file at custom position in place of pre-defined model folder.
+- added --s-folder flag for `s` that helps in generating `service` file at custom position in place of pre-defined service folder.
+- added --r-folder flag for `m` that helps in generating `repository` file at custom position in place of pre-defined repository folder.
+- added --a-folder flag for `a` that helps in generating `aspect` file at custom position in place of pre-defined aspect folder.
+- Added defintion for ElementType.PARAMETER inside aspect flag
+- Added Internalization i18N to CMS accessible inside `--pluginCodeGen` through `internationalization` flag
+
+## [1.1.0] - 2019-05-23
+
+### Added
+
+- Optimized Code for Better Processing of the system
+- Better logs for easy changes
+- Bugs Resolved for --pluginCodeGen oauth2 flag
+- --import-sql flag to model entity which create insert sql statement and add it to import.sql file in both main and test environments present under resources folder.
+- -times is an extension to --import-sql flag that will add the same insert statement n times as mentioned along with the flag under a single multLine comment in both main and test environments
+
+### Changed
+
+- Now user has no need to manually add essential sql files during --pluginCodeGen, script will automatically do it
+- Now no need to run Ctrl+A and Ctrl+I to format xml file on --pluginCodeGen run
+- Now all the dependencies will be added at the top for better visibility.
+- Now user can know which set of dependencies are added for which extension
+
 ## [1.0.7] - 2019-05-21
 
 ### Added

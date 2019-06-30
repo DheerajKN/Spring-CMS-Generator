@@ -1,102 +1,185 @@
-#!/bin/bash 
+#!/bin/bash
 
 working_dir=$(find src/main/java -name *Application.java | sed 's|/[^/]*$||' | head -n 1)
 #working_test_dir=$(find src/test/java -name *ApplicationTests.java | sed 's|/[^/]*$||' | head -n 1)
 working_test_dir="${working_dir//main/test}"
 package_name=$(echo $working_dir | cut -c 15- | tr "/" .)
 
-function javaVariable()
-{
-  local smallCase=$(echo "$1" | sed 's/^./\L&\E/')
-  echo "$smallCase"
+function javaVariable() {
+	local smallCase=$(echo "$1" | sed 's/^./\L&\E/')
+	echo "$smallCase"
 }
 
-function dbVariable()
-{
-  local smallCaseWithUnderscore=$(echo "$1" | sed -e 's/\([^[:blank:]]\)\([[:upper:]]\)/\1_\2/g' | tr '[:upper:]' '[:lower:]')
+function dbVariable() {
+	local smallCaseWithUnderscore=$(echo "$1" | sed -e 's/\([^[:blank:]]\)\([[:upper:]]\)/\1_\2/g' | tr '[:upper:]' '[:lower:]')
 
-  echo "$smallCaseWithUnderscore"
+	echo "$smallCaseWithUnderscore"
+}
+
+function importSqlFormatter() {
+	local sqlType="$(cut -d':' -f2 <<<"${1::-1}")"
+	if [[ "$sqlType" == String ]]; then echo "'$1',"; else echo "$1,"; fi
+}
+
+folder_values() {
+	package_ext=""
+	package_ext=$3
+	for flag in $2; do
+		if [[ $flag == $1* ]]; then
+			package_intent_ext=${flag:11}
+			if [[ "${package_intent_ext:0:1}" == "." ]]; then
+				[ "${package_intent_ext: -1}" == "." ] && package_ext=${package_intent_ext%?}${package_ext} || package_ext=${package_intent_ext}
+			else
+				echo -e "\033[1;31mfolder name must start with ."
+				exit 1
+			fi
+			break
+		fi
+	done
 }
 
 fileName=$(echo "$2" | sed 's/^./\U&\E/')
-smallCase=$(javaVariable $fileName)   
+smallCase=$(javaVariable $fileName)
 smallCaseWithUnderscore=$(dbVariable $smallCase)
 
 mkdir -p $working_test_dir/controller
 
 if [[ $1 == *--pluginCodeGen* ]]; then
+	nameLine=$(grep -n "<name>" pom.xml | cut -d ':' -f 1)
+
+	projName=$(sed -e "${nameLine}q;d" pom.xml | sed -e 's/<[^>]*>//g' | sed "s/^[ \t]*//")
+
+	projNameInSmall=$(echo "$projName" | tr '[:upper:]' '[:lower:]')
+
+	newLine=\\n
 	packagingType=$(sed -n -e 's/.*<packaging>\(.*\)<\/packaging>.*/\1/p' pom.xml)
-	
-	sed -i '/<\/version>/,/<name>/{/<[^\/]*\/packaging>/d}' pom.xml
+	[ -z "$packagingType" ] && packagingType=war
+
 	sed -i '/<\/project>/d' pom.xml
 	sed -i '/<finalName>/,/<\/packaging>/c<\/build>' pom.xml
 
-	sed -i "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>\
-	<\/build>\
-	<packaging>${packagingType}<\/packaging>\
+	sed -i "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>${newLine}\
+	<\/build>${newLine}\
+	<packaging>${packagingType}<\/packaging>${newLine}\
 <\/project>/g" pom.xml
 
-printf '\e[1;35m%-6s\e[m' "Perform Ctrl+A and Ctrl+I to format pom.xml file
-"
 	if [ "$packagingType" == "war" ]; then
 		printf '\e[1;35m%-6s\e[m' "For war file, value in <finalName> is the context-path
 		"
 		printf '\e[1;36m%-6s\e[m' "Also make sure you extends SpringBootServletInitializer
 		"
 		printf '\e[1;36m%-6s\e[m' "spring.datasource.jndi-name in application.properties is necessary
-		"
+"
 	elif [ "$packagingType" == "jar" ]; then
 		printf '\e[1;35m%-6s\e[m' "For jar file, server.servlet.context-path is needed along 
 		with <finalName>
 		"
 		printf '\e[1;36m%-6s\e[m' "instance's database credentials are needed if application.yml
 		is not added in the instance.
-		"
+"
+	fi
+
+	if [[ $* == *internationalization* ]]; then
+		mkdir -p $working_dir/{configuration,controller}
+		mkdir -p src/main/resources/messages
+		echo "package "$package_name".configuration;
+import java.util.Locale;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Translator {
+
+   private static ResourceBundleMessageSource messageSource;
+
+   @Autowired
+   Translator(ResourceBundleMessageSource messageSource) {
+      Translator.messageSource = messageSource;
+   }
+
+   public static String toLocale(String msgCode) {
+      Locale locale = LocaleContextHolder.getLocale();
+      return messageSource.getMessage(msgCode, null, locale);
+   }
+}" >"$working_dir/configuration/Translator.java"
+
+		echo "package "$package_name".configuration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+
+@Configuration
+public class CustomLocaleResolver 
+             extends AcceptHeaderLocaleResolver 
+             implements WebMvcConfigurer {
+
+   @Bean
+   public ResourceBundleMessageSource messageSource() {
+      ResourceBundleMessageSource rs = new ResourceBundleMessageSource();
+      rs.setBasename(\"messages/messages\");
+      rs.setDefaultEncoding(\"UTF-8\");
+      rs.setUseCodeAsDefaultMessage(true);
+      return rs;
+   }    
+}" >"$working_dir/configuration/CustomLocaleResolver.java"
+		echo "hello=Hello there" >src/main/resources/messages/messages_en.properties
+
+		echo "hello=Hallo" >src/main/resources/messages/messages_de.properties
+
+		echo "package $package_name.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import $package_name.configuration.Translator;
+
+@RestController
+public class InternationalizationController {
+	
+	@GetMapping(\"/internationalization\")
+	public ResponseEntity<String> internationalMessage(){
+		return ResponseEntity.ok(Translator.toLocale(\"hello\"));
+	}
+}" >$working_dir/controller/InternationalizationController.java
 	fi
 
 	if [[ $* == *sonar* ]]; then
-		nameLine=$(grep -n "<name>" pom.xml | cut -d ':' -f 1)
-
-		projName=$(sed -e "${nameLine}q;d" pom.xml | sed -e 's/<[^>]*>//g' | sed "s/^[ \t]*//" )
-
-		projNameInSmall=$(echo "$projName" | tr '[:upper:]' '[:lower:]')
-
-		pluginLine=$(grep -n "</plugin>" pom.xml | cut -d ':' -f 1)
-		sed -i "${pluginLine}i\
-		</plugin>\
+		sed -i 's/		<\/plugin>/		<\/plugin>\
+			<!-- plugin and execution goals needed for running sonar -->\
 			<plugin>\
-				<groupId>org.apache.maven.plugins</groupId>\
-				<artifactId>maven-surefire-plugin</artifactId>\
-			</plugin>\
+				<groupId>org.apache.maven.plugins<\/groupId>\
+				<artifactId>maven-surefire-plugin<\/artifactId>\
+			<\/plugin>\
 			<plugin>\
-	           <groupId>org.jacoco</groupId>\
-	           <artifactId>jacoco-maven-plugin</artifactId>\
-	           <version>0.8.0</version>\
-	           <executions>\
-	               <execution>\
-	                   <id>default-prepare-agent</id>\
-	                   <goals>\
-	                       <goal>prepare-agent</goal>\
-	                   </goals>\
-	               </execution>\
-	               <execution>\
-	                   <id>default-report</id>\
-	                   <phase>prepare-package</phase>\
-	                   <goals>\
-	                       <goal>report</goal>\
-	                   </goals>\
-	               </execution>\
-	           </executions>\
-       	</plugin>\
-		</plugins>\
-			<finalName>${projNameInSmall}</finalName>\
-	</build>" pom.xml
+				<groupId>org.jacoco<\/groupId>\
+				<artifactId>jacoco-maven-plugin<\/artifactId>\
+				<version>0.8.0<\/version>\
+				<executions>\
+					<execution>\
+						<id>default-prepare-agent<\/id>\
+						<goals>\
+							<goal>prepare-agent<\/goal>\
+						<\/goals>\
+					<\/execution>\
+					<execution>\
+						<id>default-report<\/id>\
+						<phase>prepare-package<\/phase>\
+						<goals>\
+							<goal>report<\/goal>\
+						<\/goals>\
+					<\/execution>\
+				<\/executions>\
+			<\/plugin>/g' pom.xml
 
-	sed -i "$((pluginLine+1)),$((pluginLine+3))d" pom.xml
+		packageInBrackets=$(echo "$package_name" | tr . "/")
 
-packageInBrackets=$(echo "$package_name" | tr . "/")
-
-echo "sonar.projectKey=${projNameInSmall}-java
+		echo "sonar.projectKey=${projNameInSmall}-java
 sonar.projectName=${projName}-Java
 sonar.projectVersion=1.0
 sonar.dynamicAnalysis=reuseReports
@@ -108,33 +191,39 @@ sonar.tests=src/test/java
 sonar.sources=src/main/java
 
 sonar.java.binaries=target/classes
-sonar.java.test.binaries=./target/test-classes/${packageInBrackets}" > sonar-project.properties
-	
-	printf '\e[1;35m%-6s\e[m' "	Updated pom.xml with required plugins for sonar.
-	Perform Ctrl+A and Ctrl+I to format pom.xml file.
+sonar.java.test.binaries=./target/test-classes/${packageInBrackets}" >sonar-project.properties
+
+		printf '\e[1;35m%-6s\e[m' "	Updated pom.xml with required plugins for sonar.
 	Added sonar-project.properties with required context
 "
 	fi
 
 	if [[ $* == *multiLang-support* ]]; then
 		mkdir -p src/main/resources/languageTranslations
-echo "{
+		echo "{
 	\"hello\": \"Hello\"
-}" > src/main/resources/languageTranslations/en.json
+}" >src/main/resources/languageTranslations/en.json
 
-echo "{
+		echo "{
 	\"hello\": \"Hallo\"
-}" > src/main/resources/languageTranslations/de.json
-		sed -i '26i\
-			\
+}" >src/main/resources/languageTranslations/de.json
+
+		sed -i 's/	<dependencies>/	<dependencies>\
+  <!-- Dependencies needed for multiLang-support -->\
 		<dependency>\
-        <groupId>com.jayway.jsonpath</groupId>\
-    		<artifactId>json-path</artifactId>\
-       </dependency>' pom.xml
+			<groupId>com.jayway.jsonpath<\/groupId>\
+			<artifactId>json-path<\/artifactId>\
+		<\/dependency>\
+		<dependency>\
+			<groupId>org.projectlombok<\/groupId>\
+			<artifactId>lombok<\/artifactId>\
+			<optional>true<\/optional>\
+		<\/dependency>\
+    /g' pom.xml
 
-mkdir -p $working_dir/{controller,service,model,repository,aspect}
+		mkdir -p $working_dir/{controller,service,model,repository,aspect}
 
-echo "package "$package_name".model;
+		echo "package "$package_name".model;
 
 import java.util.List;
 
@@ -172,9 +261,9 @@ public class LanguageTranslations
 	
 //	and subsequently this file will contain
 // it's equivalent @OneToMany mapping
-}" > "$working_dir/model/LanguageTranslations.java"
+}" >"$working_dir/model/LanguageTranslations.java"
 
-echo "package "$package_name".repository;
+		echo "package "$package_name".repository;
 
 import org.springframework.data.repository.CrudRepository;
 import java.util.Optional;
@@ -183,7 +272,7 @@ import "$package_name.model.LanguageTranslations";
 public interface LanguageTranslationsRepository extends CrudRepository<LanguageTranslations, Long> 
 {
 	Optional<LanguageTranslations> findByLanguageName(String languageName);
-}" > "$working_dir/repository/LanguageTranslationsRepository.java"
+}" >"$working_dir/repository/LanguageTranslationsRepository.java"
 
 		echo "package "$package_name".aspect;
 
@@ -195,12 +284,11 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface LanguageChecker {}
-" > "$working_dir/aspect/LanguageChecker.java"
+" >"$working_dir/aspect/LanguageChecker.java"
 
 		echo "package "$package_name".aspect;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -228,9 +316,6 @@ public class LanguageCheckerAspect {
 		
 		if(languageTranslationsRepository.findByLanguageName(locale).isPresent())
 		{
-			Field f = String.class.getDeclaredField(\"value\");
-			f.setAccessible(true);
-			f.set(locale, new String(locale).concat(\";\").concat(languageTranslationService.getTranslationLanguageData(locale)).toCharArray());
 			return joinPoint.proceed();
 		}
 		return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
@@ -254,8 +339,8 @@ public class LanguageCheckerAspect {
 	     }
 	     return -1;
 	}
-}" > "$working_dir/aspect/LanguageCheckerAspect.java"
-		
+}" >"$working_dir/aspect/LanguageCheckerAspect.java"
+
 		echo "package "$package_name".controller;
 
 import java.util.HashMap;
@@ -267,7 +352,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import com.jayway.jsonpath.JsonPath;
 
+import "$package_name".aspect.LanguageChecker;
 import "$package_name".service.LanguageTranslationService;
 		
 @RestController
@@ -276,20 +363,17 @@ public class LanguageTranslationController
 	@Autowired
 	private LanguageTranslationService languageTranslationService;
 	
+	@LanguageChecker
 	@GetMapping(\"/langCode\")
-	public ResponseEntity<Map<String, String>> getLangCodeAndJson(@RequestHeader(\"Accept-Language\")String locale)
+	public ResponseEntity<String> getLangCodeAndJson(@RequestHeader(\"Accept-Language\")String locale)
 	{
-		String[] localeInfoData = languageTranslationService.getTranslationLanguageData(locale).split(\";\");
+		String localeJSONData = languageTranslationService.getTranslationLanguageData(locale);
 		
-		Map<String, String> localeData = new HashMap<>();
-		localeData.put(\"locale\", localeInfoData[0]);
-		localeData.put(\"localeJson\", localeInfoData[1]);
-		
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(localeData);
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(\"Requested Locale is: \" + locale + \" and Translation is: \" + JsonPath.read(localeJSONData, \"$.hello\"));
 	}
-}" > "$working_dir/controller/LanguageTranslationController.java" 
+}" >"$working_dir/controller/LanguageTranslationController.java"
 
-echo "package "$package_name".service;
+		echo "package "$package_name".service;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -315,39 +399,48 @@ public class LanguageTranslationService
 			return null;
 		}		
 	}
-}" > "$working_dir/service/LanguageTranslationService.java" 
-		printf '\e[1;34m%-6s\e[m \e[1;36m%-6s\e[m' "Generated en, de json files
+}" >"$working_dir/service/LanguageTranslationService.java"
+		printf '\e[1;31m%-6s\e[m' "Generated en, de json files
 Updated pom.xml with required imports for multiLang support
 Generated LanguageTranslations model and it's Repository method
 LanguageChecker Aspect file
 Sample Implementation of Multi-Lang using LanguageTranslationController and LanguageTranslationService
-Add these lines in this file -> import.sql" "
-INSERT INTO language_translations(language_name)VALUES('en');
-INSERT INTO language_translations(language_name)VALUES('de');
+Added mysql lines to this file in both test and main folders-> import.sql
 "
+
+		for i in main test; do
+
+			echo "
+" >>src/$i/resources/import.sql
+
+			sed -i -e '$a\
+INSERT INTO language_translations(language_name)VALUES(\x27en\x27);\
+INSERT INTO language_translations(language_name)VALUES(\x27de\x27);' src/$i/resources/import.sql
+		done
 	fi
 	if [[ $* == *freemaker* ]]; then
-	mkdir -p $working_dir/controller
-		sed -i '26i\
-			\
+		mkdir -p $working_dir/controller
+		sed -i 's/	<dependencies>/	<dependencies>\
+	<!-- Dependencies needed for supporting freemaker -->\
 		<dependency>\
-           <groupId>org.springframework.boot</groupId>\
-           <artifactId>spring-boot-starter-freemarker</artifactId>\
-       </dependency>\
+           <groupId>org.springframework.boot<\/groupId>\
+           <artifactId>spring-boot-starter-freemarker<\/artifactId>\
+       <\/dependency>\
        <dependency>\
-  		  	<groupId>org.apache.poi</groupId>\
-    	  	<artifactId>poi</artifactId>\
-    	  	<version>3.10-FINAL</version>\
-		</dependency>' pom.xml
+  		  	<groupId>org.apache.poi<\/groupId>\
+    	  	<artifactId>poi<\/artifactId>\
+    	  	<version>3.10-FINAL<\/version>\
+		<\/dependency>\
+		/g' pom.xml
 
-echo "
-" >> src/main/resources/application.properties
-       sed -i '1i\
+		echo "
+" >>src/main/resources/application.properties
+		sed -i '1i\
 			 \
 spring.freemarker.template-loader-path: classpath:/static\
 spring.freemarker.suffix: .ftl' src/main/resources/application.properties
 
-echo "<#import \"/spring.ftl\" as spring />
+		echo "<#import \"/spring.ftl\" as spring />
 
 <!DOCTYPE html>
 <html lang=\"en\">
@@ -363,9 +456,9 @@ echo "<#import \"/spring.ftl\" as spring />
     	<h2>Hello there to \${user}</h2>
 		<!-- <img src=\"\${img}\" /> -->
     </body>
-</html>" > src/main/resources/static/sample.ftl
+</html>" >src/main/resources/static/sample.ftl
 
-echo "package "$package_name".controller;
+		echo "package "$package_name".controller;
 
 import java.io.IOException;
 import org.apache.commons.codec.binary.Base64;
@@ -397,40 +490,41 @@ public class FreeMakerController
 		//model.addAttribute(\"img\", imgLogo());
 		return \"data:image/png;base64,\" + new String(imgBytesAsBase64);
 	}
-}" > "$working_dir/controller/FreeMakerController.java"
+}" >"$working_dir/controller/FreeMakerController.java"
 
-printf '\e[1;39m%-6s\e[m' "Updated pom.xml with required imports for freemaker
+		printf '\e[1;39m%-6s\e[m' "Updated pom.xml with required imports for freemaker
 Added necessary lines to pom.xml
 Added Sample Implementaion of the same using sample.ftl in resources/static folder and FreemakerController
 "
 	fi
 
 	if [[ $* == *mysql* ]]; then
-	
-		sed -i '26i\
-		\
+
+		sed -i 's/	<dependencies>/	<dependencies>\
+	<!-- Dependencies needed for mysql -->\
 		<dependency>\
-			<groupId>com.h2database</groupId>\
-			<artifactId>h2</artifactId>\
-			<scope>test</scope>\
-		</dependency>\
+			<groupId>com.h2database<\/groupId>\
+			<artifactId>h2<\/artifactId>\
+			<scope>test<\/scope>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>mysql</groupId>\
-			<artifactId>mysql-connector-java</artifactId>\
-			<scope>runtime</scope>\
-		</dependency>\
+			<groupId>mysql<\/groupId>\
+			<artifactId>mysql-connector-java<\/artifactId>\
+			<scope>runtime<\/scope>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>org.springframework.boot</groupId>\
-			<artifactId>spring-boot-starter-data-jpa</artifactId>\
-		</dependency>\
+			<groupId>org.springframework.boot<\/groupId>\
+			<artifactId>spring-boot-starter-data-jpa<\/artifactId>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>org.projectlombok</groupId>\
-			<artifactId>lombok</artifactId>\
-			<optional>true</optional>\
-		</dependency>' pom.xml
+			<groupId>org.projectlombok<\/groupId>\
+			<artifactId>lombok<\/artifactId>\
+			<optional>true<\/optional>\
+		<\/dependency>\
+		/g' pom.xml
 
 		echo "
-" >> src/main/resources/application.properties
+" >>src/main/resources/application.properties
 		sed -i '1i\
 spring.jpa.hibernate.ddl-auto=update\
 \
@@ -444,14 +538,14 @@ spring.datasource.url=jdbc:mysql://localhost:3306/*someDBName*?createDatabaseIfN
 spring.datasource.username=root\
 spring.datasource.password=root\
 spring.jpa.properties.hibernate.dialect = org.hibernate.dialect.MySQL5Dialect\
-server.servlet.context-path=/*someContextPath*' src/main/resources/application.properties
+server.servlet.context-path=/*someContextPath*\n' src/main/resources/application.properties
 
-mkdir -p src/test/resources
+		mkdir -p src/test/resources
 
-echo "
-" >> src/test/resources/application.properties
+		echo "
+" >>src/test/resources/application.properties
 
-sed -i '1i\
+		sed -i '1i\
 spring.jpa.hibernate.ddl-auto=create\
 spring.datasource.url=jdbc:h2:mem:db;DB_CLOSE_ON_EXIT=FALSE\
 spring.datasource.username=sa\
@@ -460,33 +554,34 @@ spring.jpa.database-platform=org.hibernate.dialect.H2Dialect\
 spring.h2.console.enabled=true\
 spring.datasource.driverClassName=org.h2.Driver' src/test/resources/application.properties
 
-printf "Updated pom.xml with required imports for mysql functionality
+		printf "Updated pom.xml with required imports for mysql functionality
 Added necessary lines in application.properties in both main and test folders
 "
-printf "\e[1;31mMake sure to update \e[46;5;12mtomcat-jndi-name and databaseName and someContextPath\e[0m \e[1;31min main/resources/app.properties file\e[0m
+		printf "\e[1;31mMake sure to update \e[46;5;12mtomcat-jndi-name and databaseName and someContextPath\e[0m \e[1;31min main/resources/app.properties file\e[0m
 "
 	fi
 
 	if [[ $* == *oauth2* ]]; then
-	mkdir -p $working_dir/{controller,service,model,repository,security}
-		sed -i '26i\
-		\
+		mkdir -p $working_dir/{controller,model,repository,security}
+		sed -i 's/	<dependencies>/	<dependencies>\
+	<!-- Dependencies needed for OAuth2 -->\
 		<dependency>\
-			<groupId>org.springframework.boot</groupId>\
-			<artifactId>spring-boot-starter-security</artifactId>\
-		</dependency>\
+			<groupId>org.springframework.boot<\/groupId>\
+			<artifactId>spring-boot-starter-security<\/artifactId>\
+		<\/dependency>\
 		<dependency>\
-			<groupId>org.springframework.security</groupId>\
-			<artifactId>spring-security-test</artifactId>\
-			<scope>test</scope>\
-		</dependency>\
-			<dependency>\
-  		    <groupId>org.springframework.security.oauth</groupId>\
-  		 	<artifactId>spring-security-oauth2</artifactId>\
-   		 	<version>2.3.3.RELEASE</version>\
-		</dependency>' pom.xml
+			<groupId>org.springframework.security<\/groupId>\
+			<artifactId>spring-security-test<\/artifactId>\
+			<scope>test<\/scope>\
+		<\/dependency>\
+		<dependency>\
+  		  <groupId>org.springframework.security.oauth<\/groupId>\
+  		 	<artifactId>spring-security-oauth2<\/artifactId>\
+   		 	<version>2.3.3.RELEASE<\/version>\
+		<\/dependency>\
+		/g' pom.xml
 
-echo "package "$package_name".controller;
+		echo "package "$package_name".controller;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -502,8 +597,11 @@ public class OAuth2Controller {
 	@Autowired
 	private ConsumerTokenServices tokenServices;
 	
+	@Autowired
+	private HttpServletRequest request;
+
 	@PostMapping(\"/logout\")
-    public ResponseEntity<Void> logout(HttpServletRequest request)
+    public ResponseEntity<Void> logout()
     {
        String authorization = request.getHeader(\"Authorization\");
        if (authorization != null && authorization.contains(\"Bearer\"))
@@ -513,21 +611,21 @@ public class OAuth2Controller {
        }      
        return ResponseEntity.ok(null);      
     }
-}" > "$working_dir/controller/OAuth2Controller.java"
-			
-echo "package "$package_name".repository;
+}" >"$working_dir/controller/OAuth2Controller.java"
+
+		echo "package "$package_name".repository;
 
 import java.util.Optional;
 
 import org.springframework.data.repository.CrudRepository;
 
-import "$package_name".model.User;
+import "$package_name".model.UserOAuth2;
 
-public interface UserRepository extends CrudRepository<User, Long> 
+public interface UserOAuth2Repository extends CrudRepository<UserOAuth2, Long> 
 {
-	Optional<User> findByEmail(String email);
-}" > "$working_dir/repository/UserRepository.java"
-echo "package "$package_name".model;
+	Optional<UserOAuth2> findByEmail(String email);
+}" >"$working_dir/repository/UserOAuth2Repository.java"
+		echo "package "$package_name".model;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -552,8 +650,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name=\"user\")
-public class User implements UserDetails
+@Table(name=\"user_oauth2\")
+public class UserOAuth2 implements UserDetails
 {
 	private static final long serialVersionUID = 8734450729169071352L;
 
@@ -620,9 +718,9 @@ public class User implements UserDetails
 	public boolean isEnabled() {
 		return enabled;
 	}
-}" > "$working_dir/model/User.java"
+}" >"$working_dir/model/UserOAuth2.java"
 
-			echo "package "$package_name".security;
+		echo "package "$package_name".security;
 
 import java.io.IOException;
 
@@ -665,9 +763,9 @@ public class CorsFilter implements Filter
     @Override
     public void init(FilterConfig config) {
     }
-}" > "$working_dir/security/CorsFilter.java"
+}" >"$working_dir/security/CorsFilter.java"
 
-oauth2Config="package "$package_name".security;
+		oauth2Config="package "$package_name".security;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -692,6 +790,7 @@ import org.springframework.security.oauth2.config.annotation.web.configurers.Aut
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
 import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
 import org.springframework.security.oauth2.provider.token.store.JdbcTokenStore;
 import org.springframework.http.HttpMethod;
 
@@ -702,8 +801,8 @@ import org.springframework.http.HttpMethod;
 public class OAuth2Config extends AuthorizationServerConfigurerAdapter
 {"
 
-if [[ $* == *oauth2-db* ]]; then
-oauth2Config+="    	 
+		if [[ $* == *oauth2-db* ]]; then
+			oauth2Config+="    	 
 	@Lazy
 	@Autowired
 	@Qualifier(\"userDetailsService\")
@@ -775,15 +874,25 @@ oauth2Config+="
         return new JdbcTokenStore(dataSource);
     }   
 }"
- 
-else
-oauth2Config+="
+
+		else
+			oauth2Config+="
 	@Autowired
 	@Qualifier(\"userDetailsService\")
 	private UserDetailsService userDetailsService;
 
 	@Autowired
 	private AuthenticationManager authenticationManager;
+
+		@Bean
+    public PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+		@Bean
+    public TokenStore tokenStore() {
+        return new InMemoryTokenStore();
+    }
 	
 	@Autowired
 	private TokenStore tokenStore;
@@ -827,10 +936,10 @@ oauth2Config+="
 //			endpoints.allowedTokenEndpointRequestMethods(HttpMethod.GET, HttpMethod.POST);
 //    }
 }"
-fi
-echo "$oauth2Config" > "$working_dir/security/OAuth2Config.java"
+		fi
+		echo "$oauth2Config" >"$working_dir/security/OAuth2Config.java"
 
-echo "package "$package_name".security;
+		echo "package "$package_name".security;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -839,25 +948,25 @@ import org.springframework.security.oauth2.common.OAuth2AccessToken;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.security.oauth2.provider.token.TokenEnhancer;
 
-import "$package_name".model.User;
+import "$package_name".model.UserOAuth2;
 
 public class CustomTokenConverter implements TokenEnhancer
 {
    @Override
   public OAuth2AccessToken enhance(OAuth2AccessToken accessToken, OAuth2Authentication authentication)
  {
-       User user = (User) authentication.getPrincipal();
+       UserOAuth2 loggedInUser = (UserOAuth2) authentication.getPrincipal();
        final Map<String, Object> additionalInfo = new HashMap<>();
 
-       additionalInfo.put(\"name\", user.getUsername());
+       additionalInfo.put(\"name\", loggedInUser.getUsername());
 
        ((DefaultOAuth2AccessToken) accessToken).setAdditionalInformation(additionalInfo);
 
        return accessToken;
    }
-}" > "$working_dir/security/CustomTokenConverter.java"
+}" >"$working_dir/security/CustomTokenConverter.java"
 
-echo "package "$package_name".security;
+		echo "package "$package_name".security;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -874,9 +983,9 @@ public class ResourceServerWebSecurityConfigurer extends ResourceServerConfigure
             .anyRequest().authenticated()
             .and().csrf().disable();
     }
-}" > "$working_dir/security/ResourceServerWebSecurityConfigurer.java"
+}" >"$working_dir/security/ResourceServerWebSecurityConfigurer.java"
 
-echo "package "$package_name".security;
+		echo "package "$package_name".security;
 
 import java.util.Optional;
 
@@ -886,28 +995,41 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import "$package_name".model.User;
-import "$package_name".repository.UserRepository;
+import "$package_name".model.UserOAuth2;
+import "$package_name".repository.UserOAuth2Repository;
 
 @Service(\"userDetailsService\")
-public class UserService implements UserDetailsService
+public class UserOAuth2Service implements UserDetailsService
 {
 	@Autowired
-	private UserRepository userRepository;		
+	private UserOAuth2Repository userOAuth2Repository;		
 	
 	@Override
 	public UserDetails loadUserByUsername(String email) 
 	{
-		Optional<User> user=userRepository.findByEmail(email);
+		Optional<UserOAuth2> user= userOAuth2Repository.findByEmail(email);
 		if(!user.isPresent())
 		{
 			throw new UsernameNotFoundException(null);
 		}
 		return user.get();	
 	}
-}" > "$working_dir/security/UserService.java"
-	
-	webSecurityConfigurer="package "$package_name".security;
+}" >"$working_dir/security/UserOAuth2Service.java"
+
+		echo "package "$package_name".repository;
+
+import java.util.Optional;
+
+import org.springframework.data.repository.CrudRepository;
+
+import com.dheeraj.cms.proj.model.UserOAuth2;
+
+public interface UserOAuth2Repository extends CrudRepository<UserOAuth2, Long> 
+{
+	Optional<UserOAuth2> findByEmail(String email);
+}" >"$working_dir/repository/UserOAuth2Repository.java"
+
+		webSecurityConfigurer="package "$package_name".security;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -922,10 +1044,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.OAuth2ClientContext;
 import org.springframework.security.oauth2.client.filter.OAuth2ClientContextFilter;
-import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;"
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;
+"
 
-if [[ $* == *oauth2-db* ]]; then
-webSecurityConfigurer+="
+		if [[ $* == *oauth2-db* ]]; then
+			webSecurityConfigurer+="
 @Configuration
 @EnableOAuth2Client
 public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
@@ -950,24 +1073,28 @@ public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
     }
 }"
 
-printf '\e[1;38m%-6s\e[m' "Generated Security Folder with all required files
-Updated pom.xml files with required dependencies
-Added Sample Controller
-Generated User Model and Repo to support OAuth2 dependency."
-
-printf '\e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;32m%-6s\e[m' "Make sure to write this mysql lines in" "import.sql" "where OAuth Client Credentials are user_name:" "admin" "and password:" "admin123" "
-
-create table if not exists oauth_client_details(client_id VARCHAR(255) PRIMARY KEY,resource_ids VARCHAR(255),client_secret VARCHAR(255),scope VARCHAR(255),authorized_grant_types VARCHAR(255),web_server_redirect_uri VARCHAR(255),authorities VARCHAR(255),access_token_validity INTEGER,refresh_token_validity INTEGER,additional_information VARCHAR(4096),autoapprove VARCHAR(255));
-
-create table if not exists oauth_access_token (token_id VARCHAR(255),token BLOB,authentication_id VARCHAR(255) PRIMARY KEY,user_name VARCHAR(255),client_id VARCHAR(255),authentication BLOB,refresh_token VARCHAR(255));
-
-create table if not exists oauth_refresh_token (token_id VARCHAR(255),token BLOB,authentication BLOB);
-
-INSERT INTO oauth_client_details(client_id, client_secret, scope, authorized_grant_types,web_server_redirect_uri, authorities, access_token_validity,refresh_token_validity, additional_information, autoapprove)VALUES('admin', '{bcrypt}\$2a\$10\$bTqEsnkat8dqmJGYIKpEaeSYTHmfw/cKXrJe5dpRCBaAjzFloLDcO', 'admin,read,write','password,authorization_code,refresh_token', NULL, NULL, 86400, 0, NULL, TRUE);
+			printf '\e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m \e[1;34m%-6s\e[m \e[1;35m%-6s\e[m' "OAuth2-db configuration has added mysql lines in" "import.sql" "with OAuth Client Credentials are user_name:" "admin" "and password:" "admin123
 "
 
-else
-webSecurityConfigurer+="
+			for i in main test; do
+
+				echo "
+" >>src/$i/resources/import.sql
+
+				sed -i '1i\
+\
+create table if not exists oauth_client_details(client_id VARCHAR(255) PRIMARY KEY,resource_ids VARCHAR(255),client_secret VARCHAR(255),scope VARCHAR(255),authorized_grant_types VARCHAR(255),web_server_redirect_uri VARCHAR(255),authorities VARCHAR(255),access_token_validity INTEGER,refresh_token_validity INTEGER,additional_information VARCHAR(4096),autoapprove VARCHAR(255));\
+\
+create table if not exists oauth_access_token (token_id VARCHAR(255),token BLOB,authentication_id VARCHAR(255) PRIMARY KEY,user_name VARCHAR(255),client_id VARCHAR(255),authentication BLOB,refresh_token VARCHAR(255));\
+\
+create table if not exists oauth_refresh_token (token_id VARCHAR(255),token BLOB,authentication BLOB);\
+\
+INSERT INTO oauth_client_details(client_id, client_secret, scope, authorized_grant_types,web_server_redirect_uri, authorities, access_token_validity,refresh_token_validity, additional_information, autoapprove)VALUES(\x27admin\x27, \x27{bcrypt}\$2a\$10\$bTqEsnkat8dqmJGYIKpEaeSYTHmfw/cKXrJe5dpRCBaAjzFloLDcO\x27, \x27admin,read,write\x27,\x27password,authorization_code,refresh_token\x27, NULL, NULL, 86400, 0, NULL, TRUE);\
+' src/$i/resources/import.sql
+			done
+
+		else
+			webSecurityConfigurer+="
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
@@ -993,16 +1120,23 @@ public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
     }
 }"
 
-echo "$webSecurityConfigurer" > "$working_dir/security/WebSecurityConfigurer.java"
-fi
+			echo "$webSecurityConfigurer" >"$working_dir/security/WebSecurityConfigurer.java"
+
+			printf '\e[1;38m%-6s\e[m' "Generated Security Folder with all required files
+Updated pom.xml files with required dependencies
+Added Sample Controller
+Generated User Model and Repo to support OAuth2 dependency."
+		fi
 
 	fi
 fi
 if [[ $1 == *"c"* ]]; then
-mkdir -p $working_dir/controller
-  controller="package "$package_name".controller;
+	folder_values --c-folder "$*" .controller
+	mkdir -p $working_dir${package_ext//.//}
+	controller="package "$package_name${package_ext}";
 
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 "
 
 	if [[ $* == *--need-sample* ]]; then
@@ -1013,18 +1147,21 @@ import org.springframework.web.bind.annotation.*;
 	fi
 
 	if [[ $1 == *"s"* ]]; then
+		folder_values --s-folder "$*" .service
 		controller+="import org.springframework.beans.factory.annotation.Autowired;
-import "$package_name".service."${fileName}"Service;
+import "$package_name${package_ext}.${fileName}"Service;
 		"
 	fi
 
-controller+="
+	folder_values --c-folder "$*" .controller
+	controller+="
+@Transactional
 @RestController
 public class "${fileName}"Controller 
 {
-"			
+"
 	if [[ $1 == *"s"* ]]; then
-	controller+="	@Autowired
+		controller+="	@Autowired
 	private "${fileName}"Service "$smallCase"Service;
 	"
 	fi
@@ -1063,22 +1200,22 @@ public class "${fileName}"Controller
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}"
 	fi
-controller+="
+	controller+="
 }"
 
-if [[ $* == *--overwrite* ]]; then
-	echo "$controller" > "$working_dir/controller/${fileName}Controller.java"
-elif [ -f "$working_dir/controller/${fileName}Controller.java" ] && [ -s "$working_dir/controller/${fileName}Controller.java" ]; then
-	echo -e "\033[1;31mIt seems the CONTROLLER file is already being created, or has data.
+	if [[ $* == *--overwrite* ]]; then
+		echo "$controller" >"$working_dir/controller/${fileName}Controller.java"
+	elif [ -f "$working_dir${package_ext//.//}/${fileName}Controller.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}Controller.java" ]; then
+		echo -e "\033[1;31mIt seems the CONTROLLER file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another controller using c <newControllerName>tag
-	or overwrite current one using only c <oldControllerName> --overwrite flag";
-else
-	echo "$controller" > "$working_dir/controller/${fileName}Controller.java"
-fi	
-#Create Test file for the same
+	or overwrite current one using only c <oldControllerName> --overwrite flag"
+	else
+		echo "$controller" >"$working_dir${package_ext//.//}/${fileName}Controller.java"
+	fi
+	#Create Test file for the same
 
-echo "package "$package_name".controller;
+	echo "package "$package_name".controller;
 
 import org.junit.Test;
 
@@ -1089,21 +1226,23 @@ public class "${fileName}"ControllerTest
 	{
 
 	}
-}" > "$working_test_dir/controller/${fileName}ControllerTest.java"
+}" >"$working_test_dir/controller/${fileName}ControllerTest.java"
 fi
 
-
 if [[ $1 == *"m"* ]]; then
-mkdir -p $working_dir/model
-if [ -f "$working_dir/model/${fileName}.java" ] && [ -s "$working_dir/model/${fileName}.java" ]; then
-	echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
+	folder_values --m-folder "$*" .model
+	mkdir -p $working_dir${package_ext//.//}
+	if [ -f "$working_dir${package_ext//.//}/${fileName}.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}.java" ]; then
+		echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
 	So either safeguard it before re-executing
-	or create another model using m <newModelName> tag";
-else
-  model="package "$package_name".model;
+	or create another model using m <newModelName> tag"
+	else
+		model="package "$package_name${package_ext}";
 
 import javax.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.List;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -1123,282 +1262,365 @@ public class ${fileName}
 	
 "
 
-while true; do
-  printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out"
-  printf "\n"
-   read -e -p "propName in camelCase: " propName
-     [[ -n "$propName" ]] || break
-    propName=$(javaVariable $propName)
-    prop_Name=$(dbVariable $propName) 
-options=("int" "String" "long" "boolean")
+		sqlInitialData="#INSERT INTO $smallCaseWithUnderscore("
+		sqlRestData='VALUES('
+		while true; do
+			printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out"
+			printf "\n"
+			read -e -p "propName in camelCase: " propName
+			[[ -n "$propName" ]] || break
+			propName=$(javaVariable $propName)
+			prop_Name=$(dbVariable $propName)
+			sqlInitialData+="${prop_Name},"
+			options=("int" "String" "long" "boolean")
 
-for ((i=0;i<${#options[@]};i++)); do 
-  string="$(($i+1))) ${options[$i]}"
-  echo "$string"
-done
+			for ((i = 0; i < ${#options[@]}; i++)); do
+				string="$(($i + 1))) ${options[$i]}"
+				echo "$string"
+			done
 
-while true; do
-  read -e -p 'Enter dataType of the property: ' opt
-if [ "$opt" -ge 1 -a "$opt" -le 4 ]; then   
-    dT=${options[$opt-1]}	
-    break;
-   fi
-done
+			while true; do
+				read -e -p 'Enter dataType of the property: ' opt
+				if [ "$opt" -ge 1 -a "$opt" -le 4 ]; then
+					dT=${options[$opt - 1]}
+					sqlRestData+=$(importSqlFormatter "<${propName}:${dT}>")
+					break
+				fi
+			done
 
-options=("true" "false")
+			options=("complusory and unique" "complusory" "optional")
 
-for ((i=0;i<${#options[@]};i++)); do 
-  string="$(($i+1))) ${options[$i]}"
-  echo "$string"
-done
+			for ((i = 0; i < ${#options[@]}; i++)); do
+				string="$(($i + 1))) ${options[$i]}"
+				echo "$string"
+			done
 
-while true; do
-  read -e -p 'Enter nullable status of the property: ' opt
-if [ "$opt" -ge 1 -a "$opt" -le 2 ]; then   
-    n=${options[$opt-1]}	
-    break;
-   fi
-done
+			while true; do
+				read -e -p 'Enter mandatory status of the property: ' opt
+				if [ "$opt" -ge 1 -a "$opt" -le 3 ]; then
+					n=${options[$opt - 1]}
+					if [[ $n == "complusory and unique" ]]; then
+						mandatory="nullable=false, unique=true"
+					elif [[ $n == "complusory" ]]; then
+						mandatory="nullable=false"
+					else
+						mandatory="nullable=true"
+					fi
+					break
+				fi
+			done
 
-for ((i=0;i<${#options[@]};i++)); do 
-  string="$(($i+1))) ${options[$i]}"
-  echo "$string"
-done
-
-while true; do
-  read -e -p 'Enter unique status of the property: ' opt
-if [ "$opt" -ge 1 -a "$opt" -le 2 ]; then   
-    t=${options[$opt-1]}
-    break;
-   fi
-done
-
-    model+="	@Column(name=\"$prop_Name\", nullable=$n, unique=$t)
+			model+="	@Column(name=\"$prop_Name\", $mandatory)
 	private $dT $propName;
 
 "
-done
+		done
 
-options=("M21" "12M" "121P" "121C")
+		options=("M21" "12M" "121P" "121C")
 
-for ((i=0;i<${#options[@]};i++)); do 
-  string="$(($i+1))) ${options[$i]}"
-  echo "$string"
-done
+		for ((i = 0; i < ${#options[@]}; i++)); do
+			string="$(($i + 1))) ${options[$i]}"
+			echo "$string"
+		done
 
-while true; do
+		while true; do
 
-	read -e -p 'Enter the relationship to be used in this model: ' opt
-	[[ -n "$opt" ]] || break
-	if [ "$opt" -ge 4 -a "$opt" -le 1 ]; then   
-		break;
-   	fi
-	opt=${options[$opt-1]}	
-	read -e -p 'Type the Model Name that you want to relate this model to: ' relatedModel
-		declare -c relatedModel="$relatedModel"
-		smallCaseOfRelatedModel=$(javaVariable $relatedModel)
-		smallCaseOfRelatedModelWithUnderscore=$(dbVariable $smallCaseOfRelatedModel)
+			printf '\e[1;34m%-6s\e[m' "Just press Enter to skip out from relationalMapping
+"
+			read -e -p 'Enter the relationship type from the above options to be added in this model: ' opt
+			[[ -n "$opt" ]] || break
+			if [ "$opt" -ge 4 -a "$opt" -le 1 ]; then
+				break
+			fi
+			opt=${options[$opt - 1]}
+			read -e -p 'Type the Model Name that you want to relate this model to: ' relatedModel
+			relatedModel=$(echo "$relatedModel" | sed 's/^./\U&\E/')
+			smallCaseOfRelatedModel=$(javaVariable $relatedModel)
+			smallCaseOfRelatedModelWithUnderscore=$(dbVariable $smallCaseOfRelatedModel)
 
-case $opt in
-	M21)
-		model+="	@ManyToOne
+			case $opt in
+			M21)
+				model+="	@ManyToOne
 	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
 	private $relatedModel $smallCaseOfRelatedModel;
 "
+				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
+				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
 
-	modelInPrint+="
+				modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
 	
 	@JsonIgnore
 	@OneToMany(targetEntity=${fileName}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
 	private List<${fileName}> $smallCase;
 	"
-	;;
-	12M)
-		model+="	@JsonIgnore
+				;;
+			12M)
+				model+="	@JsonIgnore
 		@OneToMany(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
 		private List<$relatedModel> $smallCaseOfRelatedModel;
 "
 
-	modelInPrint+="
+				modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
 	
 	@ManyToOne
     @JoinColumn(name=\""$smallCaseWithUnderscore"_id\",referencedColumnName=\""$smallCaseWithUnderscore"_id\")
     private ${fileName} $smallCase;
 	"
-	;;
-	121P)
-	model+="	@JsonIgnore
+				;;
+			121P)
+				model+="	@JsonIgnore
 	@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
 	private $relatedModel $smallCaseOfRelatedModel;
 "
-	modelInPrint+="
+				modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
 	
 	@OneToOne
 	@JoinColumn(name=\""$smallCase"_id\",referencedColumnName=\""$smallCase"_id\",nullable=false)
 	private ${fileName} $smallCase;
 	"
-	;;
-	121C)
-	model+="	@OneToOne
+				;;
+			121C)
+				model+="	@OneToOne
 	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
 	private $relatedModel $smallCaseOfRelatedModel;
 "
-	modelInPrint+="
+				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
+				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
+
+				modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
 	
 	@JsonIgnore
 	@OneToOne(targetEntity=${fileName}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
 	private ${fileName} $smallCase;
 	"
-	;;
-esac
-done
+				;;
+			esac
+		done
 
-model+="}" 
+		model+="}"
 
-echo "$model" > "$working_dir/model/${fileName}.java"
-echo "$modelInPrint"
+		echo "$model" >"$working_dir${package_ext//.//}/${fileName}.java"
+		echo "$modelInPrint"
 
-#Repository Code
-options=("CrudRepository" "JpaRepository")
+		if [[ $* == *--import-sql* ]]; then
+			echo "" >>src/main/resources/import.sql
+			for flag in $*; do
+				if [[ $flag == -times* ]]; then
+					flagVal=${flag:7}
+					flagVal=${flagVal:-1}
+					break
+				fi
+				flagVal=${flagVal:-1}
+			done
 
-for ((i=0;i<${#options[@]};i++)); do 
-  string="$(($i+1))) ${options[$i]}"
-  echo "$string"
-done
+			for ((n = 0; n < $flagVal; n++)); do
+				finalSQLData+="${sqlInitialData::-1})${sqlRestData::-1});\n"
+			done
 
-while true; do
-  read -e -p 'Repository type: ' opt
-if [ "$opt" -ge 1 -a "$opt" -le 2 ]; then   
-    repo=${options[$opt-1]}	
-    break;
-   fi
-done
+			sed -i "\$a${finalSQLData}" src/main/resources/import.sql
+		fi
 
-repoCode="package "$package_name".repository;
+		#Repository Code
+		options=("CrudRepository" "JpaRepository")
+
+		for ((i = 0; i < ${#options[@]}; i++)); do
+			string="$(($i + 1))) ${options[$i]}"
+			echo "$string"
+		done
+
+		while true; do
+			read -e -p 'Repository type: ' opt
+			if [ "$opt" -ge 1 -a "$opt" -le 2 ]; then
+				repo=${options[$opt - 1]}
+				break
+			fi
+		done
+
+		folder_values --r-folder "$*" .repository
+		repoCode="package "$package_name${package_ext}";
 "
 
-case $repo in 
-CrudRepository)
-	repoCode+="import org.springframework.data.repository.CrudRepository;"
-	;;
-JpaRepository)
-	repoCode+="import org.springframework.data.jpa.repository.JpaRepository;"
-	;;
-esac
+		case $repo in
+		CrudRepository)
+			repoCode+="import org.springframework.data.repository.CrudRepository;"
+			;;
+		JpaRepository)
+			repoCode+="import org.springframework.data.jpa.repository.JpaRepository;"
+			;;
+		esac
 
-repoCode+="
-import "$package_name.model.${fileName}";
+		folder_values --m-folder "$*" .model
+		repoCode+="
+import "$package_name${package_ext}"."${fileName}";
 
 public interface "${fileName}"Repository extends "$repo"<"${fileName}", Long> 
 {
 
-}" 
-mkdir -p $working_dir/repository
-echo "$repoCode" > "$working_dir/repository/${fileName}Repository.java"
-fi
+}"
+		folder_values --r-folder "$*" .repository
+		mkdir -p $working_dir${package_ext//.//}
+		echo "$repoCode" >"$working_dir${package_ext//.//}/${fileName}Repository.java"
+	fi
 fi
 
 if [[ $1 == *"s"* ]]; then
-mkdir -p $working_dir/service
-  service="package "$package_name".service;
+
+	folder_values --s-folder "$*" .service
+	mkdir -p $working_dir${package_ext//.//}
+	service="package "$package_name${package_ext}";
 
 import org.springframework.stereotype.Service;
 "
 
 	if [[ $1 == *"m"* ]]; then
+		folder_values --r-folder "$*" .repository
 		service+="import org.springframework.beans.factory.annotation.Autowired;
-import "$package_name".repository."${fileName}"Repository;
+import "$package_name${package_ext}"."${fileName}"Repository;
 		"
 	fi
 
-service+="
+	service+="
 @Service
 public class "${fileName}"Service 
 {
-"			
+"
 	if [[ $1 == *"m"* ]]; then
-	service+="	@Autowired
+		service+="	@Autowired
 	private "${fileName}"Repository "$smallCase"Repository;"
 	fi
-service+="
+	service+="
 }"
-if [[ $* == *--overwrite* ]]; then
-	echo "$service" > "$working_dir/service/${fileName}Service.java"
-elif [ -f "$working_dir/service/${fileName}Service.java" ] && [ -s "$working_dir/service/${fileName}Service.java" ]; then
-	echo -e "\033[1;31mIt seems the SERVICE file is already being created, or has data.
+	folder_values --s-folder "$*" .service
+	if [[ $* == *--overwrite* ]]; then
+		echo "$service" >"$working_dir${package_ext//.//}/${fileName}Service.java"
+	elif [ -f "$working_dir${package_ext//.//}/${fileName}Service.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}Service.java" ]; then
+		echo -e "\033[1;31mIt seems the SERVICE file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another model using s <newServiceName> tag
-	or overwrite current one using only s <oldServiceName> --overwrite flag";
-else
-	echo "$service" > "$working_dir/service/${fileName}Service.java"
-fi
+	or overwrite current one using only s <oldServiceName> --overwrite flag"
+	else
+		echo "$service" >"$working_dir${package_ext//.//}/${fileName}Service.java"
+	fi
 fi
 
 if [[ $1 == *"a"* ]]; then
-mkdir -p $working_dir/aspect
-elemtype_options=("ANNOTATION_TYPE" "CONSTRUCTOR" "FIELD" "LOCAL_VARIABLE" "METHOD" "PACKAGE" "PARAMETER" "TYPE")
+	folder_values --a-folder "$*" .aspect
+	mkdir -p $working_dir${package_ext//.//}
+	elemtype_options=("ANNOTATION_TYPE" "CONSTRUCTOR" "FIELD" "LOCAL_VARIABLE" "METHOD" "PACKAGE" "PARAMETER" "TYPE")
 
-for ((i=0;i<${#elemtype_options[@]};i++)); do 
-  string="$(($i+1))) ${elemtype_options[$i]}"
-  echo "$string"
-done
+	for ((i = 0; i < ${#elemtype_options[@]}; i++)); do
+		string="$(($i + 1))) ${elemtype_options[$i]}"
+		echo "$string"
+	done
 
-while true; do
-  read -e -p 'ElementType of the aspect: ' opt
-if [ "$opt" -ge 1 -a "$opt" -le 8 ]; then   
-    elemType=${elemtype_options[$opt-1]}	
-    break;
-   fi
-done
+	while true; do
+		read -e -p 'ElementType of the aspect: ' opt
+		if [ "$opt" -ge 1 -a "$opt" -le 8 ]; then
+			elemType=${elemtype_options[$opt - 1]}
+			break
+		fi
+	done
 
-rententionpolicy_options=("RUNTIME" "SOURCE" "CLASS")
+	rententionpolicy_options=("RUNTIME" "SOURCE" "CLASS")
 
-for ((i=0;i<${#rententionpolicy_options[@]};i++)); do 
-  string="$(($i+1))) ${rententionpolicy_options[$i]}"
-  echo "$string"
-done
+	for ((i = 0; i < ${#rententionpolicy_options[@]}; i++)); do
+		string="$(($i + 1))) ${rententionpolicy_options[$i]}"
+		echo "$string"
+	done
 
-while true; do
-  read -e -p 'Retention Policy of the aspect: ' opt
-if [ "$opt" -ge 1 -a "$opt" -le 3 ]; then   
-    retenPolicy=${rententionpolicy_options[$opt-1]}	
-    break;
-   fi
-done
+	while true; do
+		read -e -p 'Retention Policy of the aspect: ' opt
+		if [ "$opt" -ge 1 -a "$opt" -le 3 ]; then
+			retenPolicy=${rententionpolicy_options[$opt - 1]}
+			break
+		fi
+	done
 
-echo "package "$package_name".aspect;
+	aspectInterface="package "$package_name${package_ext}";
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.springframework.core.annotation.AliasFor;
 
 @Target(ElementType."$elemType")
 @Retention(RetentionPolicy."$retenPolicy")
 public @interface "${fileName}" {
+"
+	if [[ "$elemType" == "PARAMETER" ]]; then
+		aspectInterface+="	@AliasFor(\"operationType\")
+	String value() default \"\";
+	
+	@AliasFor(\"value\")
+	String operationType() default \"\";
+"
+	fi
+	aspectInterface+="}"
+	echo "$aspectInterface" >"$working_dir${package_ext//.//}/${fileName}.java"
 
-}" > "$working_dir/aspect/${fileName}.java"
+	aspectImpl="package "$package_name${package_ext}";
 
-echo "package "$package_name".aspect;
-
+import java.lang.annotation.Annotation;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.SoftException;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
 @Aspect
 @Component
-public class ${fileName}Aspect 
-{
-	@Around(\"@annotation($package_name.aspect.${fileName})\")
-	public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
-		Object u = joinPoint.getArgs()[0];
-		return joinPoint.proceed();
-	}
-}" > "$working_dir/aspect/${fileName}Aspect.java"
+public class ${fileName}Aspect {"
+	if [[ "$elemType" == "PARAMETER" ]]; then
+		aspectImpl+="		
+		@Around(\"execution(* *(.., @$package_name${package_ext}.${fileName} (*), ..))\")
+		public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
+			Object[] args = joinPoint.getArgs();
 
+			//get all annotations in the arguments
+			MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+			String methodName = signature.getMethod().getName();
+			Class<?>[] parameterTypes = signature.getMethod().getParameterTypes();
+			Annotation[][] annotations;
+			try {
+				annotations = joinPoint.getTarget().getClass().
+						getMethod(methodName, parameterTypes).getParameterAnnotations();
+			} catch (Exception e) {
+				throw new SoftException(e);
+			}
+
+			//Find annotated argument
+			for (int i = 0; i < args.length; i++) {
+				for (Annotation annotation : annotations[i]) {
+					if (annotation.annotationType() == ${fileName}.class) {
+						${fileName} fetchValue = (${fileName}) annotation;
+
+						String val = fetchValue.value().isEmpty() ? 
+							fetchValue.operationType() : fetchValue.value();
+						// Perform operations over the data
+						System.out.println(val);
+						args[i] = val;
+					}
+				}
+			}
+			//execute original method with new args
+			return joinPoint.proceed(args);
+		}
+"
+	else
+		aspectImpl+="
+		@Around(\"@annotation($package_name${package_ext}.${fileName})\")
+		public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
+			Object u = joinPoint.getArgs()[0];
+			return joinPoint.proceed();
+		}
+"
+	fi
+	aspectImpl+="}"
+	echo "$aspectImpl" >"$working_dir${package_ext//.//}/${fileName}Aspect.java"
 fi
