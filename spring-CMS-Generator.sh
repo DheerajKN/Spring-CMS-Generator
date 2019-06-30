@@ -79,6 +79,76 @@ if [[ $1 == *--pluginCodeGen* ]]; then
 "
 	fi
 
+	if [[ $* == *internationalization* ]]; then
+		mkdir -p $working_dir/{configuration,controller}
+		mkdir -p src/main/resources/messages
+		echo "package "$package_name".configuration;
+import java.util.Locale;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Translator {
+
+   private static ResourceBundleMessageSource messageSource;
+
+   @Autowired
+   Translator(ResourceBundleMessageSource messageSource) {
+      Translator.messageSource = messageSource;
+   }
+
+   public static String toLocale(String msgCode) {
+      Locale locale = LocaleContextHolder.getLocale();
+      return messageSource.getMessage(msgCode, null, locale);
+   }
+}" >"$working_dir/configuration/Translator.java"
+
+		echo "package "$package_name".configuration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+
+@Configuration
+public class CustomLocaleResolver 
+             extends AcceptHeaderLocaleResolver 
+             implements WebMvcConfigurer {
+
+   @Bean
+   public ResourceBundleMessageSource messageSource() {
+      ResourceBundleMessageSource rs = new ResourceBundleMessageSource();
+      rs.setBasename(\"messages/messages\");
+      rs.setDefaultEncoding(\"UTF-8\");
+      rs.setUseCodeAsDefaultMessage(true);
+      return rs;
+   }    
+}" >"$working_dir/configuration/CustomLocaleResolver.java"
+		echo "hello=Hello there" >src/main/resources/messages/messages_en.properties
+
+		echo "hello=Hallo" >src/main/resources/messages/messages_de.properties
+
+		echo "package $package_name.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import $package_name.configuration.Translator;
+
+@RestController
+public class InternationalizationController {
+	
+	@GetMapping(\"/internationalization\")
+	public ResponseEntity<String> internationalMessage(){
+		return ResponseEntity.ok(Translator.toLocale(\"hello\"));
+	}
+}" >$working_dir/controller/InternationalizationController.java
+	fi
+
 	if [[ $* == *sonar* ]]; then
 		sed -i 's/		<\/plugin>/		<\/plugin>\
 			<!-- plugin and execution goals needed for running sonar -->\
@@ -1470,35 +1540,87 @@ if [[ $1 == *"a"* ]]; then
 		fi
 	done
 
-	echo "package "$package_name${package_ext}";
+	aspectInterface="package "$package_name${package_ext}";
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.springframework.core.annotation.AliasFor;
 
 @Target(ElementType."$elemType")
 @Retention(RetentionPolicy."$retenPolicy")
 public @interface "${fileName}" {
+"
+	if [[ "$elemType" == "PARAMETER" ]]; then
+		aspectInterface+="	@AliasFor(\"operationType\")
+	String value() default \"\";
+	
+	@AliasFor(\"value\")
+	String operationType() default \"\";
+"
+	fi
+	aspectInterface+="}"
+	echo "$aspectInterface" >"$working_dir${package_ext//.//}/${fileName}.java"
 
-}" >"$working_dir${package_ext//.//}/${fileName}.java"
+	aspectImpl="package "$package_name${package_ext}";
 
-	echo "package "$package_name${package_ext}";
-
+import java.lang.annotation.Annotation;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.SoftException;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
 @Aspect
 @Component
-public class ${fileName}Aspect 
-{
-	@Around(\"@annotation($package_name${package_ext}.${fileName})\")
-	public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
-		Object u = joinPoint.getArgs()[0];
-		return joinPoint.proceed();
-	}
-}" >"$working_dir${package_ext//.//}/${fileName}Aspect.java"
+public class ${fileName}Aspect {"
+	if [[ "$elemType" == "PARAMETER" ]]; then
+		aspectImpl+="		
+		@Around(\"execution(* *(.., @$package_name${package_ext}.${fileName} (*), ..))\")
+		public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
+			Object[] args = joinPoint.getArgs();
 
+			//get all annotations in the arguments
+			MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+			String methodName = signature.getMethod().getName();
+			Class<?>[] parameterTypes = signature.getMethod().getParameterTypes();
+			Annotation[][] annotations;
+			try {
+				annotations = joinPoint.getTarget().getClass().
+						getMethod(methodName, parameterTypes).getParameterAnnotations();
+			} catch (Exception e) {
+				throw new SoftException(e);
+			}
+
+			//Find annotated argument
+			for (int i = 0; i < args.length; i++) {
+				for (Annotation annotation : annotations[i]) {
+					if (annotation.annotationType() == ${fileName}.class) {
+						${fileName} fetchValue = (${fileName}) annotation;
+
+						String val = fetchValue.value().isEmpty() ? 
+							fetchValue.operationType() : fetchValue.value();
+						// Perform operations over the data
+						System.out.println(val);
+						args[i] = val;
+					}
+				}
+			}
+			//execute original method with new args
+			return joinPoint.proceed(args);
+		}
+"
+	else
+		aspectImpl+="
+		@Around(\"@annotation($package_name${package_ext}.${fileName})\")
+		public Object "${fileName}"AspectImpl(ProceedingJoinPoint joinPoint) throws Throwable {
+			Object u = joinPoint.getArgs()[0];
+			return joinPoint.proceed();
+		}
+"
+	fi
+	aspectImpl+="}"
+	echo "$aspectImpl" >"$working_dir${package_ext//.//}/${fileName}Aspect.java"
 fi

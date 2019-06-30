@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - added --s-folder flag for `s` that helps in generating `service` file at custom position in place of pre-defined service folder.
 - added --r-folder flag for `m` that helps in generating `repository` file at custom position in place of pre-defined repository folder.
 - added --a-folder flag for `a` that helps in generating `aspect` file at custom position in place of pre-defined aspect folder.
+- Added defintion for ElementType.PARAMETER inside aspect flag
+- Added Internalization i18N to CMS accessible inside `--pluginCodeGen` through `internationalization` flag
 
 ## [1.1.0] - 2019-05-23
 

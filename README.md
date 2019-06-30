@@ -82,7 +82,7 @@ When you are using `m` flag after the creation of properties to the entity file 
 
 This is a new feature added in the script unlike from that seen in loopback. This flag when added right after invocation of the script along with few built-in commands autogenerates pre-defined controllers and injects subsequent properties along with maven dependencies.
 
-    ~/Desktop/spring-CMS-generator.sh --pluginCodeGen oauth2 mysql multiLang-support freemaker sonar
+    ~/Desktop/spring-CMS-generator.sh --pluginCodeGen oauth2 mysql multiLang-support freemaker sonar internationalization
 
 Currently supported plugins for - -pluginCodeGen
 
@@ -105,6 +105,10 @@ Currently supported plugins for - -pluginCodeGen
 - **multiLang-support**
 
   On entering this flag, automatically the entire spring boot application will updated to `support multiple languages` to an extent using `some pre-defined code snippets that would added to resources, model and example controller and service` that works seamlessly.
+
+- **internationalization**
+
+  On entering this flag, it automatically generates configuration files inside the spring boot project which will make the system automatically support localization of messages based on the value passed in `Accept-Language` header per request along with a sample controller to demostrate how to use it.
 
 - **sonar**
 
