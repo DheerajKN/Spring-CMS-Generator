@@ -134,11 +134,13 @@ Then the script will automatically ask you some questions that will then generat
 
 - In case if you want to generate `controller` in custom path rather than pre-defined location you can use `--c-folder=.custom.controller`
 - In case if you want to generate `service` in custom path rather than pre-defined location you can use `--s-folder=.custom.service`
-- In case if you want to generate `model` in custom path rather than pre-defined location you can use `--c-folder=.custom.model`
-- In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--c-folder=.custom.repository`
-- In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--c-folder=.custom.aspect`
+- In case if you want to generate `model` in custom path rather than pre-defined location you can use `--m-folder=.custom.model`
+- In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--r-folder=.custom.repository`
+- In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--a-folder=.custom.aspect`
 
-  ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect
+ ```
+~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect
+```
 
 ## Rules for Custom Directory
 
@@ -151,3 +153,4 @@ Then the script will automatically ask you some questions that will then generat
 
 - Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
 - In the case of Aspect type as PARAMETER @Around statement will be replaced with another line
+- based on Model DTO shall be created along with javax.hibernate.validate thing
