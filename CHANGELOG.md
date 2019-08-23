@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.2.7] - 2019-06-26
+
+### Added
+
+- Swagger plugin with dependency import and sample code snippets
+- wiremock dependency
+- lombok.config added to remove unwanted code coverage when using lombok annotations.
+- Added DTO with javax.validations when m flag is passed
+
+### Changed
+
+- More data to CustomLocaleResolver to support Localization of javax.hibernate.validate annotations
+- More data added to sonar-project.properties in form of sonar.exclusions
+
 ## [1.2.5] - 2019-06-26
 
 ### Added

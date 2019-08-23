@@ -82,7 +82,7 @@ When you are using `m` flag after the creation of properties to the entity file 
 
 This is a new feature added in the script unlike from that seen in loopback. This flag when added right after invocation of the script along with few built-in commands autogenerates pre-defined controllers and injects subsequent properties along with maven dependencies.
 
-    ~/Desktop/spring-CMS-generator.sh --pluginCodeGen oauth2 mysql multiLang-support freemaker sonar internationalization
+    ~/Desktop/spring-CMS-generator.sh --pluginCodeGen oauth2 mysql multiLang-support freemaker sonar internationalization swagger
 
 Currently supported plugins for - -pluginCodeGen
 
@@ -108,11 +108,15 @@ Currently supported plugins for - -pluginCodeGen
 
 - **internationalization**
 
-  On entering this flag, it automatically generates configuration files inside the spring boot project which will make the system automatically support localization of messages based on the value passed in `Accept-Language` header per request along with a sample controller to demostrate how to use it.
+  On entering this flag, it automatically generates configuration files inside the spring boot project which will make the system automatically support localization of messages based on the value passed in `Accept-Language` header per request along with a sample controller to demostrate how to use it. Along with Localization of javax.hibernate.validator messages.
 
 - **sonar**
 
-  Adds `sonarqube plugin` to pom.xml and adds sonar.properties file into your project that would be sufficient for the sonarqube component to `generate analytics for your project.`
+  Adds `sonarqube plugin` to pom.xml and adds sonar.properties file into your project that would be sufficient for the sonarqube component to `generate analytics for your project.` Added sonar.exclusions and lombok generated code exclusions with wiremock dependency for mocking APIs.
+
+- **swagger**
+
+  Adds `swagger dependency` to pom.xml and injects SwaggerConfig file with all the basic properties in place. Along with sample controller to show all the Annotations and how to use how.
 
 ## Danger
 
@@ -131,10 +135,11 @@ Then the script will automatically ask you some questions that will then generat
 - In case if you want to generate `controller` in custom path rather than pre-defined location you can use `--c-folder=.custom.controller`
 - In case if you want to generate `service` in custom path rather than pre-defined location you can use `--s-folder=.custom.service`
 - In case if you want to generate `model` in custom path rather than pre-defined location you can use `--c-folder=.custom.model`
+- In case if you want to generate `dto` in custom path rather than pre-defined location you can use `--d-folder=.custom.dto`
 - In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--c-folder=.custom.repository`
 - In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--c-folder=.custom.aspect`
 
-  ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect
+  ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect --d-folder=.custom.dto
 
 ## Rules for Custom Directory
 
@@ -146,4 +151,3 @@ Then the script will automatically ask you some questions that will then generat
 # Further Developments
 
 - Creating .bat file for Windows so alternatively you can use git bash to execute bash script in Windows
-- In the case of Aspect type as PARAMETER @Around statement will be replaced with another line

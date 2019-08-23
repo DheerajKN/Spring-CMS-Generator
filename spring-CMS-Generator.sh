@@ -83,6 +83,7 @@ if [[ $1 == *--pluginCodeGen* ]]; then
 		mkdir -p $working_dir/{configuration,controller}
 		mkdir -p src/main/resources/messages
 		echo "package "$package_name".configuration;
+
 import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,9 +108,13 @@ public class Translator {
 }" >"$working_dir/configuration/Translator.java"
 
 		echo "package "$package_name".configuration;
+
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
@@ -119,22 +124,43 @@ public class CustomLocaleResolver
              implements WebMvcConfigurer {
 
    @Bean
-   public ResourceBundleMessageSource messageSource() {
+   public ResourceBundleMessageSource resourceBundleMessageSource() {
       ResourceBundleMessageSource rs = new ResourceBundleMessageSource();
       rs.setBasename(\"messages/messages\");
       rs.setDefaultEncoding(\"UTF-8\");
       rs.setUseCodeAsDefaultMessage(true);
       return rs;
-   }    
-}" >"$working_dir/configuration/CustomLocaleResolver.java"
-		echo "hello=Hello there" >src/main/resources/messages/messages_en.properties
+   }
+   
+   //Localization for javax.hibernate.validator
+   @Bean
+   public MessageSource messageSource() {
+       ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
+       messageSource.setBasename(\"classpath:messages/messages\");
+       messageSource.setDefaultEncoding(\"UTF-8\");
+       return messageSource;
+   }
 
-		echo "hello=Hallo" >src/main/resources/messages/messages_de.properties
+   @Bean @Override
+   public LocalValidatorFactoryBean getValidator() {
+       LocalValidatorFactoryBean bean = new LocalValidatorFactoryBean();
+       bean.setValidationMessageSource(messageSource());
+       return bean;
+   }
+}" >"$working_dir/configuration/CustomLocaleResolver.java"
+		echo "hello=Hello there
+lang_code_unsupported=Passed LangCode is currently unsupported" >src/main/resources/messages/messages_en.properties
+
+		echo "hello=Hallo
+lang_code_unsupported=Passed LangCode ist derzeit nicht unterstützt." >src/main/resources/messages/messages_de.properties
 
 		echo "package $package_name.controller;
 
+import javax.validation.constraints.Pattern;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import $package_name.configuration.Translator;
@@ -143,13 +169,25 @@ import $package_name.configuration.Translator;
 public class InternationalizationController {
 	
 	@GetMapping(\"/internationalization\")
-	public ResponseEntity<String> internationalMessage(){
+	public ResponseEntity<String> internationalMessage(
+			@RequestHeader(value=\"Accept-Language\", required=true) @Pattern(regexp=\"en|de\",message=\"{lang_code_unsupported}\")String acceptableLang){
 		return ResponseEntity.ok(Translator.toLocale(\"hello\"));
 	}
 }" >$working_dir/controller/InternationalizationController.java
+		printf '\e[1;35m%-6s\e[m' "	Created Translator and CustomLocaleResolver Components for Spring to support Internationalization.
+	Added messages folder with localized text and InternationalizationController for sample implementation"
 	fi
 
 	if [[ $* == *sonar* ]]; then
+		sed -i 's/	<dependencies>/	<dependencies>\
+		<!-- Dependencies needed for wiremock -->\
+		<dependency>\
+			<groupId>com.github.tomakehurst<\/groupId>\
+			<artifactId>wiremock<\/artifactId>\
+			<version>2.23.2<\/version>\
+			<scope>test<\/scope>\
+		<\/dependency>\
+		/g' pom.xml
 		sed -i 's/		<\/plugin>/		<\/plugin>\
 			<!-- plugin and execution goals needed for running sonar -->\
 			<plugin>\
@@ -190,26 +228,140 @@ sonar.jacoco.reportPaths=target/jacoco.exec
 sonar.tests=src/test/java
 sonar.sources=src/main/java
 
+sonar.exclusions=target/generated-sources/**, **/errors/**/* , **/security/**/*, **/configuration/**/*, **/exception/**/*
+
 sonar.java.binaries=target/classes
 sonar.java.test.binaries=./target/test-classes/${packageInBrackets}" >sonar-project.properties
 
-		printf '\e[1;35m%-6s\e[m' "	Updated pom.xml with required plugins for sonar.
-	Added sonar-project.properties with required context
+		echo "lombok.addLombokGeneratedAnnotation = true" >lombok.config
+
+		printf '\e[1;35m%-6s\e[m' "	Updated pom.xml with required dependency and plugins for sonar.
+	Added sonar-project.properties with required context and lombok.config file to ignore lombok generated code
 "
+	fi
+
+	if [[ $* == *swagger* ]]; then
+		mkdir -p $working_dir/{configuration,controller}
+
+		sed -i 's/	<dependencies>/	<dependencies>\
+		<!-- SpringFox (Swagger) Documentation-->\
+		<dependency>\
+			<groupId>io.springfox<\/groupId>\
+			<artifactId>springfox-swagger-ui<\/artifactId>\
+			<version>2.9.2<\/version>\
+		<\/dependency>\
+		<dependency>\
+			<groupId>io.springfox<\/groupId>\
+			<artifactId>springfox-swagger2<\/artifactId>\
+			<version>2.9.2<\/version>\
+		<\/dependency>\
+		/g' pom.xml
+		echo "package $package_name.configuration;
+		
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+
+import springfox.documentation.builders.ApiInfoBuilder;
+import springfox.documentation.builders.PathSelectors;
+import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.service.ApiInfo;
+import springfox.documentation.spi.DocumentationType;
+import springfox.documentation.spring.web.plugins.Docket;
+
+@Profile(\"!demo & !test\")
+@Configuration
+public class SwaggerConfig
+{
+	private static final Set<String> DEFAULT_PRODUCES_AND_CONSUMES = new HashSet<>(Arrays.asList(\"application/json\"));
+	
+	@Bean
+    public Docket productApi() {
+        return new Docket(DocumentationType.SWAGGER_2)
+        		.useDefaultResponseMessages(false)
+        		.directModelSubstitute(Object.class, java.lang.Void.class)
+        		.produces(DEFAULT_PRODUCES_AND_CONSUMES)
+        		.select().apis(RequestHandlerSelectors
+						.basePackage(\"$package_name.controller\"))
+				.paths(PathSelectors.regex(\"/.*\")).build().apiInfo(apiEndPointsInfo());
+    }
+        
+//    @Bean
+//    UiConfigurationBuilder uiConfiguration() {
+//        return UiConfigurationBuilder.builder().supportedSubmitMethods(new String[]{\"get\"});
+//    }
+    
+    private ApiInfo apiEndPointsInfo() 
+	{
+		return new ApiInfoBuilder().title(\"Spring Swagger Project\")
+				.description(\"Spring Boot Swagger Project with REST API Development\")
+				.version(\"1.0.0\")
+				.build();
+	}
+}" >"$working_dir/configuration/SwaggerConfig.java"
+
+		echo "package $package_name.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+
+@RestController
+public class SwaggerController {
+
+	@ApiOperation(value = \"Add User Data to db\", notes =  
+			\"This API is used to save all the data regarding user into the database\")
+	@ApiResponses({
+		@ApiResponse(code = 200, message = \"Successfully done\"),   
+		@ApiResponse(code = 401, message = \"Unauthorized\"),   	        
+		@ApiResponse(code = 500, message = \"Some Server Issue\"),
+	})
+	@ApiImplicitParams({
+		@ApiImplicitParam(name = \"Authorization\", value = \"Access Token eg:- Bearer {access_token}\", required = true, allowEmptyValue = false, paramType = \"header\", 
+				dataTypeClass = String.class,example = \"Bearer access_token\"), 
+		@ApiImplicitParam(name = \"userData\", value = \"Send this data in the request and the all fields are mandatory and the type is string \n {\n\" + 
+				\"	\\\"email\\\" : \\\"{emailaddress}\\\",\n\" +
+				\"	\\\"firstName\\\" : \\\"{firstName}\\\",\n\" +
+				\"	\\\"lastName\\\" : \\\"{lastName}\\\",\n\" +
+				\"	\\\"password\\\" : \\\"{password}\\\",\n\" +
+				\"	\\\"phoneNumber\\\" : \\\"{phoneNumber}\\\",\n\" +
+				\"}\", required = true, allowEmptyValue = false, paramType = \"body\", 
+				dataTypeClass = Object.class)
+	})
+	@PostMapping(\"/users\")
+	public ResponseEntity<Void> addUserInfo(@RequestBody String userData){
+		//some user based operation
+		return ResponseEntity.ok().build();
+	}
+}" >"$working_dir/controller/SwaggerController.java"
+
+		printf '\e[1;35m%-6s\e[m' "	Updated pom.xml with required dependency for swagger.
+	Added SwaggerConfig with required context and SwaggerController for sample implementation"
 	fi
 
 	if [[ $* == *multiLang-support* ]]; then
 		mkdir -p src/main/resources/languageTranslations
 		echo "{
-	\"hello\": \"Hello\"
-}" >src/main/resources/languageTranslations/en.json
+		\"hello\": \"Hello\"
+		}" >src/main/resources/languageTranslations/en.json
 
 		echo "{
-	\"hello\": \"Hallo\"
-}" >src/main/resources/languageTranslations/de.json
+		\"hello\": \"Hallo\"
+		}" >src/main/resources/languageTranslations/de.json
 
 		sed -i 's/	<dependencies>/	<dependencies>\
-  <!-- Dependencies needed for multiLang-support -->\
+		<!-- Dependencies needed for multiLang-support -->\
 		<dependency>\
 			<groupId>com.jayway.jsonpath<\/groupId>\
 			<artifactId>json-path<\/artifactId>\
@@ -1137,6 +1289,7 @@ if [[ $1 == *"c"* ]]; then
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 "
 
 	if [[ $* == *--need-sample* ]]; then
@@ -1156,6 +1309,7 @@ import "$package_name${package_ext}.${fileName}"Service;
 	folder_values --c-folder "$*" .controller
 	controller+="
 @Transactional
+@Validated
 @RestController
 public class "${fileName}"Controller 
 {
@@ -1168,10 +1322,11 @@ public class "${fileName}"Controller
 	if [[ $* == *--need-sample* ]]; then
 		controller+="
 	@GetMapping(\"/"$smallCase"/{id}\")
-	public ResponseEntity<Void> getRequest(@PathVariable(\"id\") long id)
+	public ResponseEntity<Void> getRequest(@PathVariable(\"id\") @NotNull @Min(1) long id)
 	{
 		//Accepts No Data from client but used to retrieve information
 		//PathVariable is used to retrieve values present along request path
+		//Also validates with value is not passed or is less than 1
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}
 	
@@ -1184,19 +1339,21 @@ public class "${fileName}"Controller
 	}
 	
 	@PutMapping(\"/"$smallCase"\")
-	public ResponseEntity<Void> putRequest(@RequestHeader(\"id\") long id)
+	public ResponseEntity<Void> putRequest(@RequestHeader(\"id\") @NotNull @Min(1) long id)
 	{
 		//Accepts Data from client that is to be update the data stored in Database
 		//RequestHeader is used to retrieve data from header part of HTML Request
+		//Also validates with value is not passed or is less than 1
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}
 	
 	@DeleteMapping(\"/"$smallCase"\")
-	public ResponseEntity<Void> deleteRequest(@RequestParam(\"id\") long id)
+	public ResponseEntity<Void> deleteRequest(@RequestParam(\"id\") @NotNull @Min(1) long id)
 	{
 		//Accepts Data from client that is to be deleted from Database
 		//RequestParam is used to retrieve object from path/url where format is like 
 			// localhost:8080/farmObjectiveAssessment?id=2
+		//Also validates with value is not passed or is less than 1
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}"
 	fi
@@ -1261,7 +1418,24 @@ public class ${fileName}
 	private long "$smallCase"Id;
 	
 "
+folder_values --d-folder "$*" .dto
+    if [ -f "$working_dir${package_ext//.//}/${fileName}DTO.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}DTO.java" ]; then
+	    echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
+	So either safeguard it before re-executing
+	or create another model using m <newModelName> tag"
+	else
+        dto="package "$package_name${package_ext}";
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+
+public class ${fileName}DTO
+{
+"
+fi
 		sqlInitialData="#INSERT INTO $smallCaseWithUnderscore("
 		sqlRestData='VALUES('
 		while true; do
@@ -1273,7 +1447,7 @@ public class ${fileName}
 			prop_Name=$(dbVariable $propName)
 			sqlInitialData+="${prop_Name},"
 			options=("int" "String" "long" "boolean")
-
+            validationType=("@NotNull @Min(0) @Max(1)" "@NotNull @NotBlank @Size(max=255)" "@NotNull" "@NotNull")
 			for ((i = 0; i < ${#options[@]}; i++)); do
 				string="$(($i + 1))) ${options[$i]}"
 				echo "$string"
@@ -1283,6 +1457,7 @@ public class ${fileName}
 				read -e -p 'Enter dataType of the property: ' opt
 				if [ "$opt" -ge 1 -a "$opt" -le 4 ]; then
 					dT=${options[$opt - 1]}
+					vT=${validationType[$opt - 1]}
 					sqlRestData+=$(importSqlFormatter "<${propName}:${dT}>")
 					break
 				fi
@@ -1305,6 +1480,7 @@ public class ${fileName}
 						mandatory="nullable=false"
 					else
 						mandatory="nullable=true"
+						vT=""
 					fi
 					break
 				fi
@@ -1313,6 +1489,10 @@ public class ${fileName}
 			model+="	@Column(name=\"$prop_Name\", $mandatory)
 	private $dT $propName;
 
+"
+            dto+="	$vT
+	private $dT $propName;
+	
 "
 		done
 
@@ -1402,7 +1582,10 @@ public class ${fileName}
 		done
 
 		model+="}"
+		dto+="}"
 
+		echo "$dto" >"$working_dir${package_ext//.//}/${fileName}DTO.java"
+		folder_values --m-folder "$*" .model
 		echo "$model" >"$working_dir${package_ext//.//}/${fileName}.java"
 		echo "$modelInPrint"
 
