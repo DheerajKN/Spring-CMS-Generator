@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Swagger plugin with dependency import and sample code snippets
 - wiremock dependency
 - lombok.config added to remove unwanted code coverage when using lombok annotations.
+- Added DTO with javax.validations when m flag is passed
 
 ### Changed
 

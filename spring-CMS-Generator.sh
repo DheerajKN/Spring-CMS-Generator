@@ -1289,6 +1289,7 @@ if [[ $1 == *"c"* ]]; then
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 "
 
 	if [[ $* == *--need-sample* ]]; then
@@ -1308,6 +1309,7 @@ import "$package_name${package_ext}.${fileName}"Service;
 	folder_values --c-folder "$*" .controller
 	controller+="
 @Transactional
+@Validated
 @RestController
 public class "${fileName}"Controller 
 {
@@ -1320,10 +1322,11 @@ public class "${fileName}"Controller
 	if [[ $* == *--need-sample* ]]; then
 		controller+="
 	@GetMapping(\"/"$smallCase"/{id}\")
-	public ResponseEntity<Void> getRequest(@PathVariable(\"id\") long id)
+	public ResponseEntity<Void> getRequest(@PathVariable(\"id\") @NotNull @Min(1) long id)
 	{
 		//Accepts No Data from client but used to retrieve information
 		//PathVariable is used to retrieve values present along request path
+		//Also validates with value is not passed or is less than 1
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}
 	
@@ -1336,19 +1339,21 @@ public class "${fileName}"Controller
 	}
 	
 	@PutMapping(\"/"$smallCase"\")
-	public ResponseEntity<Void> putRequest(@RequestHeader(\"id\") long id)
+	public ResponseEntity<Void> putRequest(@RequestHeader(\"id\") @NotNull @Min(1) long id)
 	{
 		//Accepts Data from client that is to be update the data stored in Database
 		//RequestHeader is used to retrieve data from header part of HTML Request
+		//Also validates with value is not passed or is less than 1
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}
 	
 	@DeleteMapping(\"/"$smallCase"\")
-	public ResponseEntity<Void> deleteRequest(@RequestParam(\"id\") long id)
+	public ResponseEntity<Void> deleteRequest(@RequestParam(\"id\") @NotNull @Min(1) long id)
 	{
 		//Accepts Data from client that is to be deleted from Database
 		//RequestParam is used to retrieve object from path/url where format is like 
 			// localhost:8080/farmObjectiveAssessment?id=2
+		//Also validates with value is not passed or is less than 1
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}"
 	fi
@@ -1413,7 +1418,24 @@ public class ${fileName}
 	private long "$smallCase"Id;
 	
 "
+folder_values --d-folder "$*" .dto
+    if [ -f "$working_dir${package_ext//.//}/${fileName}DTO.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}DTO.java" ]; then
+	    echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
+	So either safeguard it before re-executing
+	or create another model using m <newModelName> tag"
+	else
+        dto="package "$package_name${package_ext}";
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+
+public class ${fileName}DTO
+{
+"
+fi
 		sqlInitialData="#INSERT INTO $smallCaseWithUnderscore("
 		sqlRestData='VALUES('
 		while true; do
@@ -1425,7 +1447,7 @@ public class ${fileName}
 			prop_Name=$(dbVariable $propName)
 			sqlInitialData+="${prop_Name},"
 			options=("int" "String" "long" "boolean")
-
+            validationType=("@NotNull @Min(0) @Max(1)" "@NotNull @NotBlank @Size(max=255)" "@NotNull" "@NotNull")
 			for ((i = 0; i < ${#options[@]}; i++)); do
 				string="$(($i + 1))) ${options[$i]}"
 				echo "$string"
@@ -1435,6 +1457,7 @@ public class ${fileName}
 				read -e -p 'Enter dataType of the property: ' opt
 				if [ "$opt" -ge 1 -a "$opt" -le 4 ]; then
 					dT=${options[$opt - 1]}
+					vT=${validationType[$opt - 1]}
 					sqlRestData+=$(importSqlFormatter "<${propName}:${dT}>")
 					break
 				fi
@@ -1457,6 +1480,7 @@ public class ${fileName}
 						mandatory="nullable=false"
 					else
 						mandatory="nullable=true"
+						vT=""
 					fi
 					break
 				fi
@@ -1465,6 +1489,10 @@ public class ${fileName}
 			model+="	@Column(name=\"$prop_Name\", $mandatory)
 	private $dT $propName;
 
+"
+            dto+="	$vT
+	private $dT $propName;
+	
 "
 		done
 
@@ -1554,7 +1582,10 @@ public class ${fileName}
 		done
 
 		model+="}"
+		dto+="}"
 
+		echo "$dto" >"$working_dir${package_ext//.//}/${fileName}DTO.java"
+		folder_values --m-folder "$*" .model
 		echo "$model" >"$working_dir${package_ext//.//}/${fileName}.java"
 		echo "$modelInPrint"
 
