@@ -226,7 +226,7 @@ public class InternationalizationController {
 	}
 }" >$working_dir/controller/InternationalizationController.java
 		printf '\e[1;35m%-6s\e[m' "	Created Translator and CustomLocaleResolver Components for Spring to support Internationalization.
-	Added messages folder with localized text and InternationalizationController for sample implementation"
+	Added messages folder with localized text and InternationalizationController for sample implementation. Access subLocale by creating en_US.properties and hitting en-US in Accept-Language header"
 	fi
 
 	if [[ $* == *sonar* ]]; then
