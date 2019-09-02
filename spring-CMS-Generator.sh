@@ -86,10 +86,16 @@ if [[ $1 == *--pluginCodeGen* ]]; then
 
 import java.util.Locale;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import com.google.common.base.Strings;
 
 @Component
 public class Translator {
@@ -101,13 +107,32 @@ public class Translator {
       Translator.messageSource = messageSource;
    }
 
+   public static Languages getSelectedLang() {
+	   HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+	   String headerLang = request.getHeader(\"Accept-Language\");
+		if (Strings.isNullOrEmpty(headerLang)) {
+			return Languages.valueOf(\"en\");
+		} else {
+			return Languages.valueOf(headerLang.split(\"-\")[0]);	
+		}
+   }
+
    public static String toLocale(String msgCode) {
       Locale locale = LocaleContextHolder.getLocale();
       return messageSource.getMessage(msgCode, null, locale);
    }
+
+   public static String toLocale(String msgCode, Object... args) {
+	      Locale locale = LocaleContextHolder.getLocale();
+	      return String.format(messageSource.getMessage(msgCode, null, locale), args);
+   }
 }" >"$working_dir/configuration/Translator.java"
 
 		echo "package "$package_name".configuration;
+
+import java.util.Locale;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -117,6 +142,8 @@ import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+
+import com.google.common.base.Strings;
 
 @Configuration
 public class CustomLocaleResolver 
@@ -132,6 +159,29 @@ public class CustomLocaleResolver
       return rs;
    }
    
+	@Override
+	public Locale resolveLocale(HttpServletRequest request) {
+		String headerLang = request.getHeader(\"Accept-Language\");
+		if (Strings.isNullOrEmpty(headerLang)) {
+			return Locale.getDefault();
+		} else {
+			String[] values = headerLang.split(\"-\");
+			switch (values.length) {
+			case 1:
+				return new Locale(values[0]);
+
+			case 2:
+				return new Locale(values[0], values[1]);
+
+			case 3:
+				return new Locale(values[0], values[1], values[2]);
+
+			default:
+				return new Locale(\"en\");
+			}
+		}
+	}
+
    //Localization for javax.hibernate.validator
    @Bean
    public MessageSource messageSource() {
@@ -171,7 +221,8 @@ public class InternationalizationController {
 	@GetMapping(\"/internationalization\")
 	public ResponseEntity<String> internationalMessage(
 			@RequestHeader(value=\"Accept-Language\", required=true) @Pattern(regexp=\"en|de\",message=\"{lang_code_unsupported}\")String acceptableLang){
-		return ResponseEntity.ok(Translator.toLocale(\"hello\"));
+
+		return ResponseEntity.ok(\"Selected Language code is \"+Translator.getSelectedLang().getValue()+\": \"+Translator.toLocale(\"hello\"));
 	}
 }" >$working_dir/controller/InternationalizationController.java
 		printf '\e[1;35m%-6s\e[m' "	Created Translator and CustomLocaleResolver Components for Spring to support Internationalization.
@@ -531,6 +582,8 @@ import java.io.File;
 import java.nio.file.Files;
 
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StreamUtils;
+import java.nio.charset.Charset;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -542,8 +595,9 @@ public class LanguageTranslationService
 	{
 		try
 		{
-			File resource = new ClassPathResource(\"languageTranslations\"+os+locale+\".json\").getFile();
-			return new String(Files.readAllBytes(resource.toPath()));
+			return StreamUtils.copyToString(
+                new ClassPathResource(\"languageTranslations\"+os+locale+\".json\").getInputStream(),
+                   Charset.defaultCharset();
 		}
 		catch (Exception e) 
 		{

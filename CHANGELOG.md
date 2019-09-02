@@ -17,6 +17,8 @@ All notable changes to this project will be documented in this file.
 
 - More data to CustomLocaleResolver to support Localization of javax.hibernate.validate annotations
 - More data added to sonar-project.properties in form of sonar.exclusions
+- Updated LanguageTranslationService.getTranslationLanguageData method
+- Updated Internationalization Component
 
 ## [1.2.5] - 2019-06-26
 
