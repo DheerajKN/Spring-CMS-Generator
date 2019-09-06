@@ -1453,7 +1453,7 @@ if [[ $1 == *"m"* ]]; then
 import javax.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.util.List;
+import java.util.*;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -1472,24 +1472,30 @@ public class ${fileName}
 	private long "$smallCase"Id;
 	
 "
-folder_values --d-folder "$*" .dto
-    if [ -f "$working_dir${package_ext//.//}/${fileName}DTO.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}DTO.java" ]; then
-	    echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
+		folder_values --d-folder "$*" .dto
+		if [ -f "$working_dir${package_ext//.//}/${fileName}DTO.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}DTO.java" ]; then
+			echo -e "\033[1;31mIt seems the DTO file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another model using m <newModelName> tag"
-	else
-        dto="package "$package_name${package_ext}";
+		else
+			dto="package "$package_name${package_ext}";
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.*;
+
+@Getter
+@Setter
 public class ${fileName}DTO
 {
 "
-fi
+		fi
 		sqlInitialData="#INSERT INTO $smallCaseWithUnderscore("
 		sqlRestData='VALUES('
 		while true; do
@@ -1500,8 +1506,8 @@ fi
 			propName=$(javaVariable $propName)
 			prop_Name=$(dbVariable $propName)
 			sqlInitialData+="${prop_Name},"
-			options=("int" "String" "long" "boolean")
-            validationType=("@NotNull @Min(0) @Max(1)" "@NotNull @NotBlank @Size(max=255)" "@NotNull" "@NotNull")
+			options=("int" "String" "long" "boolean" "Date")
+			validationType=("@NotNull @Min(0) @Max(1)" "@NotNull @NotBlank @Size(max=255)" "@NotNull" "@NotNull" "@NotNull")
 			for ((i = 0; i < ${#options[@]}; i++)); do
 				string="$(($i + 1))) ${options[$i]}"
 				echo "$string"
@@ -1509,7 +1515,7 @@ fi
 
 			while true; do
 				read -e -p 'Enter dataType of the property: ' opt
-				if [ "$opt" -ge 1 -a "$opt" -le 4 ]; then
+				if [ "$opt" -ge 1 -a "$opt" -le 5 ]; then
 					dT=${options[$opt - 1]}
 					vT=${validationType[$opt - 1]}
 					sqlRestData+=$(importSqlFormatter "<${propName}:${dT}>")
@@ -1544,13 +1550,13 @@ fi
 	private $dT $propName;
 
 "
-            dto+="	$vT
+			dto+="	$vT
 	private $dT $propName;
 	
 "
 		done
 
-		options=("M21" "12M" "121P" "121C")
+		options=("M2M" "M21" "12M" "121P" "121C")
 
 		for ((i = 0; i < ${#options[@]}; i++)); do
 			string="$(($i + 1))) ${options[$i]}"
@@ -1573,6 +1579,27 @@ fi
 			smallCaseOfRelatedModelWithUnderscore=$(dbVariable $smallCaseOfRelatedModel)
 
 			case $opt in
+			M2M)
+                model+="	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+        @JoinTable(
+            name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
+            joinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")},
+            inverseJoinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")}
+        )
+        private Set<$relatedModel> $smallCaseOfRelatedModel = new HashSet<>();
+"
+				modelInPrint+="
+	Add this in snippet in the $relatedModel Entity file
+	
+	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    @JoinTable(
+        name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
+        joinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")},
+        inverseJoinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")}
+    )
+    private Set<${fileName}> $smallCase = new HashSet<>();
+"
+			    ;;
 			M21)
 				model+="	@ManyToOne
 	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
@@ -1587,7 +1614,7 @@ fi
 	@JsonIgnore
 	@OneToMany(targetEntity=${fileName}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
 	private List<${fileName}> $smallCase;
-	"
+"
 				;;
 			12M)
 				model+="	@JsonIgnore
@@ -1612,7 +1639,7 @@ fi
 	Add this in snippet in the $relatedModel Entity file
 	
 	@OneToOne
-	@JoinColumn(name=\""$smallCase"_id\",referencedColumnName=\""$smallCase"_id\",nullable=false)
+	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
 	private ${fileName} $smallCase;
 	"
 				;;

@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 - wiremock dependency
 - lombok.config added to remove unwanted code coverage when using lombok annotations.
 - Added DTO with javax.validations when m flag is passed
+- Date datatype along with DTO validations and sql insert
+- M2M mapping added
 
 ### Changed
 
@@ -19,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - More data added to sonar-project.properties in form of sonar.exclusions
 - Updated LanguageTranslationService.getTranslationLanguageData method
 - Updated Internationalization Component
+- OneToOne code updated
 
 ## [1.2.5] - 2019-06-26
 

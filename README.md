@@ -56,6 +56,10 @@ If you have **m** key the script prompts you to enter **propertyName** along wit
 
 When you are using `m` flag after the creation of properties to the entity file you will prompted to define any relations that this entity hold. They are basically 4 relations that can be defined:
 
+- **M2M**
+
+  This will create @ManyToMany Relation in this entity file and on the terminal generates the code-snippet for @ManyToMany that has to added in the related Model's file.
+
 - **M21**
 
   This will create @ManyToOne Relation in this entity file and on the terminal generates the code-snippet for @OneToMany that has to added in the related Model's file.
