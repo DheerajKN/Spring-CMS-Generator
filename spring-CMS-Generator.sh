@@ -123,8 +123,13 @@ public class Translator {
    }
 
    public static String toLocale(String msgCode, Object... args) {
-	      Locale locale = LocaleContextHolder.getLocale();
-	      return String.format(messageSource.getMessage(msgCode, null, locale), args);
+      Locale locale = LocaleContextHolder.getLocale();
+      return String.format(messageSource.getMessage(msgCode, null, locale), args);
+   }
+
+   public static String toLocale(String msgCode, String langCode) {
+      ResourceBundle bundle = ResourceBundle.getBundle(\"messages/messages\", Locale.forLanguageTag(langCode));
+      return bundle.getString(msgCode);
    }
 }" >"$working_dir/configuration/Translator.java"
 
