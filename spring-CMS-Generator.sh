@@ -87,7 +87,7 @@ if [[ $1 == *--pluginCodeGen* ]]; then
 import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
-
+import java.text.MessageFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -124,12 +124,17 @@ public class Translator {
 
    public static String toLocale(String msgCode, Object... args) {
       Locale locale = LocaleContextHolder.getLocale();
-      return String.format(messageSource.getMessage(msgCode, null, locale), args);
+      return MessageFormat.format(messageSource.getMessage(msgCode, null, locale), args);
    }
 
    public static String toLocale(String msgCode, String langCode) {
       ResourceBundle bundle = ResourceBundle.getBundle(\"messages/messages\", Locale.forLanguageTag(langCode));
       return bundle.getString(msgCode);
+   }
+
+    public static String toLocale(String msgCode, String langCode, Object... args) {
+      ResourceBundle bundle = ResourceBundle.getBundle(\"messages/messages\", Locale.forLanguageTag(langCode));
+      return MessageFormat.format(bundle.getString(msgCode), args);
    }
 }" >"$working_dir/configuration/Translator.java"
 
@@ -203,10 +208,10 @@ public class CustomLocaleResolver
        return bean;
    }
 }" >"$working_dir/configuration/CustomLocaleResolver.java"
-		echo "hello=Hello there
+		echo "hello=Hello there {0}
 lang_code_unsupported=Passed LangCode is currently unsupported" >src/main/resources/messages/messages_en.properties
 
-		echo "hello=Hallo
+		echo "hello=Hallo {0}
 lang_code_unsupported=Passed LangCode ist derzeit nicht unterstützt." >src/main/resources/messages/messages_de.properties
 
 		echo "package $package_name.controller;
@@ -217,17 +222,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import $package_name.configuration.Translator;
 
 @RestController
+@Validated
 public class InternationalizationController {
 	
 	@GetMapping(\"/internationalization\")
 	public ResponseEntity<String> internationalMessage(
 			@RequestHeader(value=\"Accept-Language\", required=true) @Pattern(regexp=\"en|de\",message=\"{lang_code_unsupported}\")String acceptableLang){
 
-		return ResponseEntity.ok(\"Selected Language code is \"+Translator.getSelectedLang().getValue()+\": \"+Translator.toLocale(\"hello\"));
+		return ResponseEntity.ok(\"Selected Language code is \"+Translator.getSelectedLang().getValue()+\": \"+Translator.toLocale(\"hello\", \"User\")+\": \"+Translator.toLocale(\"hello\", \"de\", \"User\"));
 	}
 }" >$working_dir/controller/InternationalizationController.java
 		printf '\e[1;35m%-6s\e[m' "	Created Translator and CustomLocaleResolver Components for Spring to support Internationalization.
@@ -1585,7 +1592,7 @@ public class ${fileName}DTO
 
 			case $opt in
 			M2M)
-                model+="	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+				model+="	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
         @JoinTable(
             name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
             joinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")},
@@ -1604,7 +1611,7 @@ public class ${fileName}DTO
     )
     private Set<${fileName}> $smallCase = new HashSet<>();
 "
-			    ;;
+				;;
 			M21)
 				model+="	@ManyToOne
 	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
