@@ -143,7 +143,7 @@ Then the script will automatically ask you some questions that will then generat
 - In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--r-folder=.custom.repository`
 - In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--a-folder=.custom.aspect`
 
-          ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect --d-folder=.custom.dto
+      ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect --d-folder=.custom.dto
 
 ## Rules for Custom Directory
 
