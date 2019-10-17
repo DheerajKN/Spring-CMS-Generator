@@ -1614,8 +1614,8 @@ public class ${fileName}DTO
 				;;
 			M21)
 				model+="	@ManyToOne
-	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
-	private $relatedModel $smallCaseOfRelatedModel;
+		@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
+		private $relatedModel $smallCaseOfRelatedModel;
 "
 				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
 				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
@@ -1644,8 +1644,8 @@ public class ${fileName}DTO
 				;;
 			121P)
 				model+="	@JsonIgnore
-	@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
-	private $relatedModel $smallCaseOfRelatedModel;
+		@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+		private $relatedModel $smallCaseOfRelatedModel;
 "
 				modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
@@ -1657,8 +1657,8 @@ public class ${fileName}DTO
 				;;
 			121C)
 				model+="	@OneToOne
-	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
-	private $relatedModel $smallCaseOfRelatedModel;
+		@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
+		private $relatedModel $smallCaseOfRelatedModel;
 "
 				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
 				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
