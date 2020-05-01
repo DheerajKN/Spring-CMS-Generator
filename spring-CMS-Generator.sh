@@ -86,10 +86,16 @@ if [[ $1 == *--pluginCodeGen* ]]; then
 
 import java.util.Locale;
 
+import javax.servlet.http.HttpServletRequest;
+import java.text.MessageFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import com.google.common.base.Strings;
 
 @Component
 public class Translator {
@@ -101,13 +107,42 @@ public class Translator {
       Translator.messageSource = messageSource;
    }
 
+   public static Languages getSelectedLang() {
+	   HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+	   String headerLang = request.getHeader(\"Accept-Language\");
+		if (Strings.isNullOrEmpty(headerLang)) {
+			return Languages.valueOf(\"en\");
+		} else {
+			return Languages.valueOf(headerLang.split(\"-\")[0]);	
+		}
+   }
+
    public static String toLocale(String msgCode) {
       Locale locale = LocaleContextHolder.getLocale();
       return messageSource.getMessage(msgCode, null, locale);
    }
+
+   public static String toLocale(String msgCode, Object... args) {
+      Locale locale = LocaleContextHolder.getLocale();
+      return MessageFormat.format(messageSource.getMessage(msgCode, null, locale), args);
+   }
+
+   public static String toLocale(String msgCode, String langCode) {
+      ResourceBundle bundle = ResourceBundle.getBundle(\"messages/messages\", Locale.forLanguageTag(langCode));
+      return bundle.getString(msgCode);
+   }
+
+    public static String toLocale(String msgCode, String langCode, Object... args) {
+      ResourceBundle bundle = ResourceBundle.getBundle(\"messages/messages\", Locale.forLanguageTag(langCode));
+      return MessageFormat.format(bundle.getString(msgCode), args);
+   }
 }" >"$working_dir/configuration/Translator.java"
 
 		echo "package "$package_name".configuration;
+
+import java.util.Locale;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -117,6 +152,8 @@ import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+
+import com.google.common.base.Strings;
 
 @Configuration
 public class CustomLocaleResolver 
@@ -132,6 +169,29 @@ public class CustomLocaleResolver
       return rs;
    }
    
+	@Override
+	public Locale resolveLocale(HttpServletRequest request) {
+		String headerLang = request.getHeader(\"Accept-Language\");
+		if (Strings.isNullOrEmpty(headerLang)) {
+			return Locale.getDefault();
+		} else {
+			String[] values = headerLang.split(\"-\");
+			switch (values.length) {
+			case 1:
+				return new Locale(values[0]);
+
+			case 2:
+				return new Locale(values[0], values[1]);
+
+			case 3:
+				return new Locale(values[0], values[1], values[2]);
+
+			default:
+				return new Locale(\"en\");
+			}
+		}
+	}
+
    //Localization for javax.hibernate.validator
    @Bean
    public MessageSource messageSource() {
@@ -148,10 +208,10 @@ public class CustomLocaleResolver
        return bean;
    }
 }" >"$working_dir/configuration/CustomLocaleResolver.java"
-		echo "hello=Hello there
+		echo "hello=Hello there {0}
 lang_code_unsupported=Passed LangCode is currently unsupported" >src/main/resources/messages/messages_en.properties
 
-		echo "hello=Hallo
+		echo "hello=Hallo {0}
 lang_code_unsupported=Passed LangCode ist derzeit nicht unterstützt." >src/main/resources/messages/messages_de.properties
 
 		echo "package $package_name.controller;
@@ -162,20 +222,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import $package_name.configuration.Translator;
 
 @RestController
+@Validated
 public class InternationalizationController {
 	
 	@GetMapping(\"/internationalization\")
 	public ResponseEntity<String> internationalMessage(
 			@RequestHeader(value=\"Accept-Language\", required=true) @Pattern(regexp=\"en|de\",message=\"{lang_code_unsupported}\")String acceptableLang){
-		return ResponseEntity.ok(Translator.toLocale(\"hello\"));
+
+		return ResponseEntity.ok(\"Selected Language code is \"+Translator.getSelectedLang().getValue()+\": \"+Translator.toLocale(\"hello\", \"User\")+\": \"+Translator.toLocale(\"hello\", \"de\", \"User\"));
 	}
 }" >$working_dir/controller/InternationalizationController.java
 		printf '\e[1;35m%-6s\e[m' "	Created Translator and CustomLocaleResolver Components for Spring to support Internationalization.
-	Added messages folder with localized text and InternationalizationController for sample implementation"
+	Added messages folder with localized text and InternationalizationController for sample implementation. Access subLocale by creating en_US.properties and hitting en-US in Accept-Language header"
 	fi
 
 	if [[ $* == *sonar* ]]; then
@@ -531,6 +594,8 @@ import java.io.File;
 import java.nio.file.Files;
 
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StreamUtils;
+import java.nio.charset.Charset;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -542,8 +607,9 @@ public class LanguageTranslationService
 	{
 		try
 		{
-			File resource = new ClassPathResource(\"languageTranslations\"+os+locale+\".json\").getFile();
-			return new String(Files.readAllBytes(resource.toPath()));
+			return StreamUtils.copyToString(
+                new ClassPathResource(\"languageTranslations\"+os+locale+\".json\").getInputStream(),
+                   Charset.defaultCharset();
 		}
 		catch (Exception e) 
 		{
@@ -1399,7 +1465,7 @@ if [[ $1 == *"m"* ]]; then
 import javax.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.util.List;
+import java.util.*;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -1418,24 +1484,30 @@ public class ${fileName}
 	private long "$smallCase"Id;
 	
 "
-folder_values --d-folder "$*" .dto
-    if [ -f "$working_dir${package_ext//.//}/${fileName}DTO.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}DTO.java" ]; then
-	    echo -e "\033[1;31mIt seems the MODEL file is already being created, or has data.
+		folder_values --d-folder "$*" .dto
+		if [ -f "$working_dir${package_ext//.//}/${fileName}DTO.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}DTO.java" ]; then
+			echo -e "\033[1;31mIt seems the DTO file is already being created, or has data.
 	So either safeguard it before re-executing
 	or create another model using m <newModelName> tag"
-	else
-        dto="package "$package_name${package_ext}";
+		else
+			dto="package "$package_name${package_ext}";
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.*;
+
+@Getter
+@Setter
 public class ${fileName}DTO
 {
 "
-fi
+		fi
 		sqlInitialData="#INSERT INTO $smallCaseWithUnderscore("
 		sqlRestData='VALUES('
 		while true; do
@@ -1446,8 +1518,8 @@ fi
 			propName=$(javaVariable $propName)
 			prop_Name=$(dbVariable $propName)
 			sqlInitialData+="${prop_Name},"
-			options=("int" "String" "long" "boolean")
-            validationType=("@NotNull @Min(0) @Max(1)" "@NotNull @NotBlank @Size(max=255)" "@NotNull" "@NotNull")
+			options=("int" "String" "long" "boolean" "Date")
+			validationType=("@NotNull @Min(0) @Max(1)" "@NotNull @NotBlank @Size(max=255)" "@NotNull" "@NotNull" "@NotNull")
 			for ((i = 0; i < ${#options[@]}; i++)); do
 				string="$(($i + 1))) ${options[$i]}"
 				echo "$string"
@@ -1455,7 +1527,7 @@ fi
 
 			while true; do
 				read -e -p 'Enter dataType of the property: ' opt
-				if [ "$opt" -ge 1 -a "$opt" -le 4 ]; then
+				if [ "$opt" -ge 1 -a "$opt" -le 5 ]; then
 					dT=${options[$opt - 1]}
 					vT=${validationType[$opt - 1]}
 					sqlRestData+=$(importSqlFormatter "<${propName}:${dT}>")
@@ -1490,13 +1562,13 @@ fi
 	private $dT $propName;
 
 "
-            dto+="	$vT
+			dto+="	$vT
 	private $dT $propName;
 	
 "
 		done
 
-		options=("M21" "12M" "121P" "121C")
+		options=("M2M" "M21" "12M" "121P" "121C")
 
 		for ((i = 0; i < ${#options[@]}; i++)); do
 			string="$(($i + 1))) ${options[$i]}"
@@ -1519,10 +1591,31 @@ fi
 			smallCaseOfRelatedModelWithUnderscore=$(dbVariable $smallCaseOfRelatedModel)
 
 			case $opt in
+			M2M)
+				model+="	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+        @JoinTable(
+            name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
+            joinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")},
+            inverseJoinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")}
+        )
+        private Set<$relatedModel> $smallCaseOfRelatedModel = new HashSet<>();
+"
+				modelInPrint+="
+	Add this in snippet in the $relatedModel Entity file
+	
+	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    @JoinTable(
+        name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
+        joinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")},
+        inverseJoinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")}
+    )
+    private Set<${fileName}> $smallCase = new HashSet<>();
+"
+				;;
 			M21)
 				model+="	@ManyToOne
-	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
-	private $relatedModel $smallCaseOfRelatedModel;
+		@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
+		private $relatedModel $smallCaseOfRelatedModel;
 "
 				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
 				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
@@ -1533,7 +1626,7 @@ fi
 	@JsonIgnore
 	@OneToMany(targetEntity=${fileName}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
 	private List<${fileName}> $smallCase;
-	"
+"
 				;;
 			12M)
 				model+="	@JsonIgnore
@@ -1551,21 +1644,21 @@ fi
 				;;
 			121P)
 				model+="	@JsonIgnore
-	@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
-	private $relatedModel $smallCaseOfRelatedModel;
+		@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+		private $relatedModel $smallCaseOfRelatedModel;
 "
 				modelInPrint+="
 	Add this in snippet in the $relatedModel Entity file
 	
 	@OneToOne
-	@JoinColumn(name=\""$smallCase"_id\",referencedColumnName=\""$smallCase"_id\",nullable=false)
+	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
 	private ${fileName} $smallCase;
 	"
 				;;
 			121C)
 				model+="	@OneToOne
-	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
-	private $relatedModel $smallCaseOfRelatedModel;
+		@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
+		private $relatedModel $smallCaseOfRelatedModel;
 "
 				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
 				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"

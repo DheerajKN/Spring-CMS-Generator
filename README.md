@@ -56,6 +56,10 @@ If you have **m** key the script prompts you to enter **propertyName** along wit
 
 When you are using `m` flag after the creation of properties to the entity file you will prompted to define any relations that this entity hold. They are basically 4 relations that can be defined:
 
+- **M2M**
+
+  This will create @ManyToMany Relation in this entity file and on the terminal generates the code-snippet for @ManyToMany that has to added in the related Model's file.
+
 - **M21**
 
   This will create @ManyToOne Relation in this entity file and on the terminal generates the code-snippet for @OneToMany that has to added in the related Model's file.
@@ -134,12 +138,12 @@ Then the script will automatically ask you some questions that will then generat
 
 - In case if you want to generate `controller` in custom path rather than pre-defined location you can use `--c-folder=.custom.controller`
 - In case if you want to generate `service` in custom path rather than pre-defined location you can use `--s-folder=.custom.service`
-- In case if you want to generate `model` in custom path rather than pre-defined location you can use `--c-folder=.custom.model`
+- In case if you want to generate `model` in custom path rather than pre-defined location you can use `--m-folder=.custom.model`
 - In case if you want to generate `dto` in custom path rather than pre-defined location you can use `--d-folder=.custom.dto`
-- In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--c-folder=.custom.repository`
-- In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--c-folder=.custom.aspect`
+- In case if you want to generate `repository` files in custom path rather than pre-defined location you can use `--r-folder=.custom.repository`
+- In case if you want to generate `aspect` in custom path rather than pre-defined location you can use `--a-folder=.custom.aspect`
 
-  ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect --d-folder=.custom.dto
+      ~/Desktop/spring-CMS-Generator.sh cmsa --c-folder=.custom. --m-folder=.tables --r-folder=.tables.repo --s-folder=.custom.web.util --a-folder=.utility.aspect --d-folder=.custom.dto
 
 ## Rules for Custom Directory
 
