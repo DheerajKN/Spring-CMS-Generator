@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Releases]
 
+## [1.2.12] - 2020-05-26
+
+### Added
+
+- Added Data Type for Enum using Spring's @Enumerated
+- Added Support for creating String based hex values as primary key's auto-generated using --id-gen-type
+
+### Changed
+
+- Added Better Spacing when creating @Entity Values.
+
 ## [1.2.7] - 2019-06-26
 
 ### Added

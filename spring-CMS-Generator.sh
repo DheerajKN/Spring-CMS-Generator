@@ -38,6 +38,15 @@ folder_values() {
 	done
 }
 
+flag_value(){
+  for flag in $2; do
+		if [[ $flag == $1* ]]; then
+      IFS== read flag value <<< $flag
+      echo $value
+    fi
+  done  
+}
+
 fileName=$(echo "$2" | sed 's/^./\U&\E/')
 smallCase=$(javaVariable $fileName)
 smallCaseWithUnderscore=$(dbVariable $smallCase)
@@ -1463,6 +1472,8 @@ if [[ $1 == *"m"* ]]; then
 		model="package "$package_name${package_ext}";
 
 import javax.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.*;
@@ -1477,13 +1488,28 @@ import lombok.Setter;
 @Entity
 @Table(name=\"$smallCaseWithUnderscore\")
 public class ${fileName} 
-{
+{	
 	@Id
-	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	@Column(name=\""$smallCaseWithUnderscore"_id\", nullable = false)
-	private long "$smallCase"Id;
-	
 "
+id_gen_type=$(flag_value --id-gen-type "$*")
+if [[ $id_gen_type == string ]]; then
+	model+="
+	@GeneratedValue(generator = \"UUID\")
+	@GenericGenerator(name = \"UUID\", strategy = \"org.hibernate.id.UUIDGenerator\", parameters = {
+			@Parameter(name = \"uuid_gen_strategy_class\", value = \"org.hibernate.id.uuid.CustomVersionOneStrategy\") })
+	private String "$smallCase"Id;
+
+"
+else
+	model+="
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	private long "$smallCase"Id;
+
+"
+fi
+
+	package_intent_ext=${flag:11}
 		folder_values --d-folder "$*" .dto
 		if [ -f "$working_dir${package_ext//.//}/${fileName}DTO.java" ] && [ -s "$working_dir${package_ext//.//}/${fileName}DTO.java" ]; then
 			echo -e "\033[1;31mIt seems the DTO file is already being created, or has data.
