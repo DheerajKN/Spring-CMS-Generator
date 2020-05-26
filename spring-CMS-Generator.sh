@@ -18,7 +18,7 @@ function dbVariable() {
 
 function importSqlFormatter() {
 	local sqlType="$(cut -d':' -f2 <<<"${1::-1}")"
-	if [[ "$sqlType" == String ]]; then echo "'$1',"; else echo "$1,"; fi
+	if [[ "$sqlType" == String ]] || [[ "$sqlType" == Enum ]]; then echo "'$1',"; else echo "$1,"; fi
 }
 
 folder_values() {
@@ -1518,7 +1518,7 @@ public class ${fileName}DTO
 			propName=$(javaVariable $propName)
 			prop_Name=$(dbVariable $propName)
 			sqlInitialData+="${prop_Name},"
-			options=("int" "String" "long" "boolean" "Date")
+			options=("int" "String" "long" "boolean" "Date" "Enum")
 			validationType=("@NotNull @Min(0) @Max(1)" "@NotNull @NotBlank @Size(max=255)" "@NotNull" "@NotNull" "@NotNull")
 			for ((i = 0; i < ${#options[@]}; i++)); do
 				string="$(($i + 1))) ${options[$i]}"
@@ -1527,7 +1527,7 @@ public class ${fileName}DTO
 
 			while true; do
 				read -e -p 'Enter dataType of the property: ' opt
-				if [ "$opt" -ge 1 -a "$opt" -le 5 ]; then
+				if [ "$opt" -ge 1 -a "$opt" -le 6 ]; then
 					dT=${options[$opt - 1]}
 					vT=${validationType[$opt - 1]}
 					sqlRestData+=$(importSqlFormatter "<${propName}:${dT}>")
@@ -1558,10 +1558,21 @@ public class ${fileName}DTO
 				fi
 			done
 
+    
+	if [[ "$dT" == Enum ]]; then
+		read -e -p "Enter Enum ClassName: " enumClassName
+		enumClassName=$(echo "$2" | sed 's/^./\U&\E/')
+			model+="	@Enumerated(EnumType.STRING)
+	@Column(name=\"$prop_Name\", $mandatory)
+	private $enumClassName $propName;
+
+"
+	else
 			model+="	@Column(name=\"$prop_Name\", $mandatory)
 	private $dT $propName;
 
 "
+	fi
 			dto+="	$vT
 	private $dT $propName;
 	
