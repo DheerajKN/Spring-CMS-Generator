@@ -1592,36 +1592,38 @@ public class ${fileName}DTO
 
 			case $opt in
 			M2M)
-				model+="	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
-        @JoinTable(
-            name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
-            joinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")},
-            inverseJoinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")}
-        )
-        private Set<$relatedModel> $smallCaseOfRelatedModel = new HashSet<>();
+				model+="	
+	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+	@JoinTable(
+		name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
+		joinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")},
+		inverseJoinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")}
+	)
+	private Set<$relatedModel> $smallCaseOfRelatedModel = new HashSet<>();
 "
 				modelInPrint+="
-	Add this in snippet in the $relatedModel Entity file
+-> Add this in snippet in the $relatedModel Entity file
 	
 	@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
-    @JoinTable(
-        name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
-        joinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")},
-        inverseJoinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")}
-    )
-    private Set<${fileName}> $smallCase = new HashSet<>();
+	@JoinTable(
+		name = \"${smallCaseOfRelatedModelWithUnderscore}es\",
+		joinColumns = {@JoinColumn(name = \""$smallCaseOfRelatedModelWithUnderscore"_id\")},
+		inverseJoinColumns = {@JoinColumn(name = \""$smallCaseWithUnderscore"_id\")}
+	)
+	private Set<${fileName}> $smallCase = new HashSet<>();
 "
 				;;
 			M21)
-				model+="	@ManyToOne
-		@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
-		private $relatedModel $smallCaseOfRelatedModel;
+				model+="	
+	@ManyToOne
+	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\")
+	private $relatedModel $smallCaseOfRelatedModel;
 "
 				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
 				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
 
 				modelInPrint+="
-	Add this in snippet in the $relatedModel Entity file
+-> Add this in snippet in the $relatedModel Entity file
 	
 	@JsonIgnore
 	@OneToMany(targetEntity=${fileName}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
@@ -1629,47 +1631,50 @@ public class ${fileName}DTO
 "
 				;;
 			12M)
-				model+="	@JsonIgnore
-		@OneToMany(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
-		private List<$relatedModel> $smallCaseOfRelatedModel;
+				model+="	
+	@JsonIgnore
+	@OneToMany(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private List<$relatedModel> $smallCaseOfRelatedModel;
 "
 
 				modelInPrint+="
-	Add this in snippet in the $relatedModel Entity file
+-> Add this in snippet in the $relatedModel Entity file
 	
 	@ManyToOne
-    @JoinColumn(name=\""$smallCaseWithUnderscore"_id\",referencedColumnName=\""$smallCaseWithUnderscore"_id\")
-    private ${fileName} $smallCase;
-	"
+	@JoinColumn(name=\""$smallCaseWithUnderscore"_id\",referencedColumnName=\""$smallCaseWithUnderscore"_id\")
+	private ${fileName} $smallCase;
+"
 				;;
 			121P)
-				model+="	@JsonIgnore
-		@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
-		private $relatedModel $smallCaseOfRelatedModel;
+				model+="	
+	@JsonIgnore
+	@OneToOne(targetEntity=$relatedModel.class, mappedBy=\"$smallCase\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
+	private $relatedModel $smallCaseOfRelatedModel;
 "
 				modelInPrint+="
-	Add this in snippet in the $relatedModel Entity file
+-> Add this in snippet in the $relatedModel Entity file
 	
 	@OneToOne
 	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
 	private ${fileName} $smallCase;
-	"
+"
 				;;
 			121C)
-				model+="	@OneToOne
-		@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
-		private $relatedModel $smallCaseOfRelatedModel;
+				model+="	
+	@OneToOne
+	@JoinColumn(name=\""$smallCaseOfRelatedModelWithUnderscore"_id\",referencedColumnName=\""$smallCaseOfRelatedModelWithUnderscore"_id\",nullable=false)
+	private $relatedModel $smallCaseOfRelatedModel;
 "
 				sqlInitialData+="${smallCaseOfRelatedModelWithUnderscore}_id,"
 				sqlRestData+="<${smallCaseOfRelatedModelWithUnderscore}_id:${relatedModel} Unique Column>,"
 
 				modelInPrint+="
-	Add this in snippet in the $relatedModel Entity file
+-> Add this in snippet in the $relatedModel Entity file
 	
 	@JsonIgnore
 	@OneToOne(targetEntity=${fileName}.class, mappedBy=\"$smallCaseOfRelatedModel\", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE, orphanRemoval=false)
 	private ${fileName} $smallCase;
-	"
+"
 				;;
 			esac
 		done
@@ -1679,8 +1684,8 @@ public class ${fileName}DTO
 
 		echo "$dto" >"$working_dir${package_ext//.//}/${fileName}DTO.java"
 		folder_values --m-folder "$*" .model
-		echo "$model" >"$working_dir${package_ext//.//}/${fileName}.java"
-		echo "$modelInPrint"
+		echo "${model}" >"$working_dir${package_ext//.//}/${fileName}.java"
+		echo "${modelInPrint}"
 
 		if [[ $* == *--import-sql* ]]; then
 			echo "" >>src/main/resources/import.sql
