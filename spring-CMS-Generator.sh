@@ -1718,7 +1718,8 @@ public class ${fileName}DTO
 
 		model+="}"
 		dto+="}"
-
+		
+		mkdir -p $working_dir${package_ext//.//}
 		echo "$dto" >"$working_dir${package_ext//.//}/${fileName}DTO.java"
 		folder_values --m-folder "$*" .model
 		echo "${model}" >"$working_dir${package_ext//.//}/${fileName}.java"
