@@ -1494,8 +1494,7 @@ public class ${fileName}
 "
 id_gen_type=$(flag_value --id-gen-type "$*")
 if [[ $id_gen_type == string ]]; then
-	model+="
-	@GeneratedValue(generator = \"UUID\")
+	model+="@GeneratedValue(generator = \"UUID\")
 	@GenericGenerator(name = \"UUID\", strategy = \"org.hibernate.id.UUIDGenerator\", parameters = {
 			@Parameter(name = \"uuid_gen_strategy_class\", value = \"org.hibernate.id.uuid.CustomVersionOneStrategy\") })
 	private String "$smallCase"Id;
@@ -1587,12 +1586,20 @@ public class ${fileName}DTO
     
 	if [[ "$dT" == Enum ]]; then
 		read -e -p "Enter Enum ClassName: " enumClassName
-		enumClassName=$(echo "$2" | sed 's/^./\U&\E/')
-			model+="	@Enumerated(EnumType.STRING)
+		folder_values --m-folder "$*" .model
+		enum="package "$package_name${package_ext}";
+
+public enum "$enumClassName" {
+
+}"
+		model+="	@Enumerated(EnumType.STRING)
 	@Column(name=\"$prop_Name\", $mandatory)
 	private $enumClassName $propName;
 
 "
+		mkdir -p $working_dir${package_ext//.//}
+		echo "$enum" >"$working_dir${package_ext//.//}/${enumClassName}.java"
+		folder_values --d-folder "$*" .dto
 	else
 			model+="	@Column(name=\"$prop_Name\", $mandatory)
 	private $dT $propName;
