@@ -668,19 +668,14 @@ INSERT INTO language_translations(language_name)VALUES(\x27de\x27);' src/$i/reso
            <groupId>org.springframework.boot<\/groupId>\
            <artifactId>spring-boot-starter-freemarker<\/artifactId>\
        <\/dependency>\
-       <dependency>\
-  		  	<groupId>org.apache.poi<\/groupId>\
-    	  	<artifactId>poi<\/artifactId>\
-    	  	<version>3.10-FINAL<\/version>\
-		<\/dependency>\
 		/g' pom.xml
 
 		echo "
 " >>src/main/resources/application.properties
 		sed -i '' '1i\
 			 \
-spring.freemarker.template-loader-path: classpath:/static\
-spring.freemarker.suffix: .ftl' src/main/resources/application.properties
+spring.freemarker.template-loader-path= classpath:/static\
+spring.freemarker.suffix= .ftl' src/main/resources/application.properties
 
 		echo "<#import \"/spring.ftl\" as spring />
 
