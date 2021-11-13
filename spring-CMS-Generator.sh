@@ -64,10 +64,10 @@ if [[ $1 == *--pluginCodeGen* ]]; then
 	packagingType=$(sed -n -e 's/.*<packaging>\(.*\)<\/packaging>.*/\1/p' pom.xml)
 	[ -z "$packagingType" ] && packagingType=war
 
-	sed -i '/<\/project>/d' pom.xml
-	sed -i '/<finalName>/,/<\/packaging>/c<\/build>' pom.xml
+	sed -i '' '/<\/project>/d' pom.xml
+	# sed -i '' '/<finalName>/,/<\/packaging>/c<\/build>' pom.xml
 
-	sed -i "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>${newLine}\
+	sed -i '' "s/<\/build>/		<finalName>${projNameInSmall}<\/finalName>${newLine}\
 	<\/build>${newLine}\
 	<packaging>${packagingType}<\/packaging>${newLine}\
 <\/project>/g" pom.xml
@@ -251,7 +251,7 @@ public class InternationalizationController {
 	fi
 
 	if [[ $* == *sonar* ]]; then
-		sed -i 's/	<dependencies>/	<dependencies>\
+		sed -i '' 's/<dependencies>/	<dependencies>\
 		<!-- Dependencies needed for wiremock -->\
 		<dependency>\
 			<groupId>com.github.tomakehurst<\/groupId>\
@@ -260,7 +260,7 @@ public class InternationalizationController {
 			<scope>test<\/scope>\
 		<\/dependency>\
 		/g' pom.xml
-		sed -i 's/		<\/plugin>/		<\/plugin>\
+		sed -i '' 's/<\/plugin>/            <\/plugin>\
 			<!-- plugin and execution goals needed for running sonar -->\
 			<plugin>\
 				<groupId>org.apache.maven.plugins<\/groupId>\
@@ -315,7 +315,7 @@ sonar.java.test.binaries=./target/test-classes/${packageInBrackets}" >sonar-proj
 	if [[ $* == *swagger* ]]; then
 		mkdir -p $working_dir/{configuration,controller}
 
-		sed -i 's/	<dependencies>/	<dependencies>\
+		sed -i '' 's/<dependencies>/	<dependencies>\
 		<!-- SpringFox (Swagger) Documentation-->\
 		<dependency>\
 			<groupId>io.springfox<\/groupId>\
@@ -432,7 +432,7 @@ public class SwaggerController {
 		\"hello\": \"Hallo\"
 		}" >src/main/resources/languageTranslations/de.json
 
-		sed -i 's/	<dependencies>/	<dependencies>\
+		sed -i '' 's/<dependencies>/	<dependencies>\
 		<!-- Dependencies needed for multiLang-support -->\
 		<dependency>\
 			<groupId>com.jayway.jsonpath<\/groupId>\
@@ -640,14 +640,14 @@ Added mysql lines to this file in both test and main folders-> import.sql
 			echo "
 " >>src/$i/resources/import.sql
 
-			sed -i -e '$a\
+			sed -i '' -e '$a\
 INSERT INTO language_translations(language_name)VALUES(\x27en\x27);\
 INSERT INTO language_translations(language_name)VALUES(\x27de\x27);' src/$i/resources/import.sql
 		done
 	fi
 	if [[ $* == *freemaker* ]]; then
 		mkdir -p $working_dir/controller
-		sed -i 's/	<dependencies>/	<dependencies>\
+		sed -i '' 's/<dependencies>/	<dependencies>\
 	<!-- Dependencies needed for supporting freemaker -->\
 		<dependency>\
            <groupId>org.springframework.boot<\/groupId>\
@@ -662,7 +662,7 @@ INSERT INTO language_translations(language_name)VALUES(\x27de\x27);' src/$i/reso
 
 		echo "
 " >>src/main/resources/application.properties
-		sed -i '1i\
+		sed -i '' '1i\
 			 \
 spring.freemarker.template-loader-path: classpath:/static\
 spring.freemarker.suffix: .ftl' src/main/resources/application.properties
@@ -727,7 +727,7 @@ Added Sample Implementaion of the same using sample.ftl in resources/static fold
 
 	if [[ $* == *mysql* ]]; then
 
-		sed -i 's/	<dependencies>/	<dependencies>\
+		sed -i '' 's/<dependencies>/	<dependencies>\
 	<!-- Dependencies needed for mysql -->\
 		<dependency>\
 			<groupId>com.h2database<\/groupId>\
@@ -752,7 +752,7 @@ Added Sample Implementaion of the same using sample.ftl in resources/static fold
 
 		echo "
 " >>src/main/resources/application.properties
-		sed -i '1i\
+		sed -i '' '1i\
 spring.jpa.hibernate.ddl-auto=update\
 \
 \
@@ -772,7 +772,7 @@ server.servlet.context-path=/*someContextPath*\n' src/main/resources/application
 		echo "
 " >>src/test/resources/application.properties
 
-		sed -i '1i\
+		sed -i '' '1i\
 spring.jpa.hibernate.ddl-auto=create\
 spring.datasource.url=jdbc:h2:mem:db;DB_CLOSE_ON_EXIT=FALSE\
 spring.datasource.username=sa\
@@ -790,7 +790,7 @@ Added necessary lines in application.properties in both main and test folders
 
 	if [[ $* == *oauth2* ]]; then
 		mkdir -p $working_dir/{controller,model,repository,security}
-		sed -i 's/	<dependencies>/	<dependencies>\
+		sed -i '' 's/<dependencies>/	<dependencies>\
 	<!-- Dependencies needed for OAuth2 -->\
 		<dependency>\
 			<groupId>org.springframework.boot<\/groupId>\
@@ -1308,7 +1308,7 @@ public class WebSecurityConfigurer extends WebSecurityConfigurerAdapter
 				echo "
 " >>src/$i/resources/import.sql
 
-				sed -i '1i\
+				sed -i '' '1i\
 \
 create table if not exists oauth_client_details(client_id VARCHAR(255) PRIMARY KEY,resource_ids VARCHAR(255),client_secret VARCHAR(255),scope VARCHAR(255),authorized_grant_types VARCHAR(255),web_server_redirect_uri VARCHAR(255),authorities VARCHAR(255),access_token_validity INTEGER,refresh_token_validity INTEGER,additional_information VARCHAR(4096),autoapprove VARCHAR(255));\
 \
@@ -1747,7 +1747,7 @@ public enum "$enumClassName" {
 				finalSQLData+="${sqlInitialData::-1})${sqlRestData::-1});\n"
 			done
 
-			sed -i "\$a${finalSQLData}" src/main/resources/import.sql
+			sed -i '' "\$a${finalSQLData}" src/main/resources/import.sql
 		fi
 
 		#Repository Code
