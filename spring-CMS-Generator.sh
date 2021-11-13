@@ -217,6 +217,21 @@ public class CustomLocaleResolver
        return bean;
    }
 }" >"$working_dir/configuration/CustomLocaleResolver.java"
+echo "package "$package_name".configuration;
+
+public enum Languages {
+    en(0), de(1);
+
+    private int value;
+
+    private Languages(int value) {
+        this.value = value;
+    }
+
+    public int getValue() {
+        return this.value;
+    }
+}">"$working_dir/configuration/Languages.java"
 		echo "hello=Hello there {0}
 lang_code_unsupported=Passed LangCode is currently unsupported" >src/main/resources/messages/messages_en.properties
 
@@ -687,10 +702,12 @@ spring.freemarker.suffix: .ftl' src/main/resources/application.properties
 
 		echo "package "$package_name".controller;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+
 import org.apache.commons.codec.binary.Base64;
 
-import org.apache.poi.util.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -711,11 +728,23 @@ public class FreeMakerController
 
 	//For Images
     public String imgLogo() throws IOException{
-		byte[] imgBytes = IOUtils.toByteArray(new ClassPathResource(\"imageName-present-resources-folder.png\").getInputStream());
+		byte[] imgBytes = readFully(new ClassPathResource(\"imageName-present-resources-folder.png\").getInputStream());
 		byte[] imgBytesAsBase64 = Base64.encodeBase64(imgBytes);
 		//Just like above 
 		//model.addAttribute(\"img\", imgLogo());
 		return \"data:image/png;base64,\" + new String(imgBytesAsBase64);
+	}
+
+	public static byte[] readFully(InputStream input) throws IOException
+	{
+		byte[] buffer = new byte[8192];
+		int bytesRead;
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		while ((bytesRead = input.read(buffer)) != -1)
+		{
+			output.write(buffer, 0, bytesRead);
+		}
+		return output.toByteArray();
 	}
 }" >"$working_dir/controller/FreeMakerController.java"
 
@@ -1249,7 +1278,7 @@ import java.util.Optional;
 
 import org.springframework.data.repository.CrudRepository;
 
-import com.dheeraj.cms.proj.model.UserOAuth2;
+import "$package_name".model.UserOAuth2;
 
 public interface UserOAuth2Repository extends CrudRepository<UserOAuth2, Long> 
 {
